@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: inference-driver
+  name: inference-driver-wo-npu
   labels:
-    app: inference-driver
+    app: inference-driver-wo-npu
 spec:
   restartPolicy: Never
 
@@ -39,12 +39,6 @@ spec:
       mountPath: /work
     - name: host-tmp
       mountPath: /tmp
-
-    resources:
-      requests:
-        hailo.ai/npu: 1
-      limits:
-        hailo.ai/npu: 1
 
     env:
     - name: NODE_NAME

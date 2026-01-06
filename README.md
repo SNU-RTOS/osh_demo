@@ -55,10 +55,11 @@ Build the required binaries using CMake.
 
 ```bash
 $ cd osh-demo
+$ docker run --rm -it -v "$PWD":/workspace -w /workspace ghcr.io/snu-rtos/osh-compile /bin/bash
 $ mkdir build && cd build
 $ cmake ..
 $ make -j8
-$ cd ..
+$ exit
 ```
 
 ---
@@ -82,7 +83,7 @@ Start the inference driver pod and execute the inference binary.
 
 ```bash
 $ kubectl apply -f inference_driver.yaml
-$ kubectl exec -it inference_driver -- /bin/bash
+$ kubectl exec -it inference-driver -- /bin/bash
 $ cd build/inference
 $ ./inference_driver ../../yolov10s.hef
 ```
@@ -99,8 +100,21 @@ Run the camera overlay binary on a system with a display connected to the board.
 * Make sure a display is connected to the target board.
 
 ```bash
-cd osh-demo/build/camera
-./camera_overlay
+$ cd build/camera
+$ ./camera_overlay
+```
+
+---
+
+## 8. Run Inference Driver without Hailo Device Plugin
+
+Verify that our Hailo Device Plugin enables access of Hailo NPUs from containers.
+
+```bash
+$ kubectl apply -f inference_driver_without_npu.yaml
+$ kubectl exec -it inference-driver-wo-npu -- /bin/bash
+$ cd build/inference
+$ ./inference_driver ../../yolov10s.hef
 ```
 
 ---
