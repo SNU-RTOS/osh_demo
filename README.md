@@ -44,7 +44,7 @@ $ rm /etc/cni/net.d/cni-containerd-net.conf
 Clone the OSH demo repository.
 
 ```bash
-$ git clone https://github.com/SNU-RTOS/osh-demo
+$ git clone https://github.com/SNU-RTOS/osh_demo
 ```
 
 ---
