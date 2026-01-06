@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: osh-demo
+  name: inference_driver
   labels:
-    app: osh-demo
+    app: inference_driver
 spec:
   restartPolicy: Never
 
