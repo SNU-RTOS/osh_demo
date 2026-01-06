@@ -1,0 +1,633 @@
+[2025-12-30 17:37:56.506] [1884950] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 17:37:56.531] [1884950] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 17:37:56.531] [1884950] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 17:37:56.531] [1884950] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 17:37:56.532] [1884950] [HailoRT] [error] [file_utils.cpp:124] [open] CHECK failed - Failed opening file, path: /path/to/yolo.hef
+[2025-12-30 17:37:56.532] [1884950] [HailoRT] [error] [hef.cpp:560] [parse_hef_file] CHECK_SUCCESS failed with status=HAILO_OPEN_FILE_FAILURE(13)
+[2025-12-30 17:37:56.533] [1884950] [HailoRT] [error] [hef.cpp:1060] [Impl] Failed parsing HEF file
+[2025-12-30 17:37:56.533] [1884950] [HailoRT] [error] [hef.cpp:333] [create] Failed creating HEF
+[2025-12-30 17:37:56.533] [1884950] [HailoRT] [error] [hef.cpp:168] [create] CHECK_SUCCESS failed with status=HAILO_OPEN_FILE_FAILURE(13)
+[2025-12-30 17:38:33.844] [1885408] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 17:38:33.867] [1885408] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 17:38:33.867] [1885408] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 17:38:33.867] [1885408] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 17:38:33.885] [1885408] [HailoRT] [info] [internal_buffer_manager.cpp:77] [print_execution_results] Planned internal buffer memory: CMA=0 CMA-Desc=327680 Pinned=4147200. memory to edge layer usage factor is 1
+[2025-12-30 17:38:33.885] [1885408] [HailoRT] [info] [internal_buffer_manager.cpp:86] [print_execution_results] Default Internal buffer planner executed successfully
+[2025-12-30 17:38:33.909] [1885408] [HailoRT] [info] [device_internal.cpp:57] [configure] Configuring HEF took 31.040131 milliseconds
+[2025-12-30 17:38:33.948] [1885408] [HailoRT] [info] [vdevice.cpp:779] [configure] Configuring HEF on VDevice took 70.368066 milliseconds
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [edge_elements.cpp:52] [create] Created (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [queue_elements.cpp:284] [create] Created (PushQEl2yolov10s/input_layer1 | timeout: 10s)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [filter_elements.cpp:101] [create] Created (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3))
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [vstream.cpp:754] [InputVStreamImpl] Creating yolov10s/input_layer1...
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [vstream_builder.cpp:102] [create_inputs] Input pipeline 'yolov10s/input_layer1': (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3)) >> (PushQEl2yolov10s/input_layer1 | timeout: 10s) >> (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800) >> HW
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [multi_io_elements.cpp:135] [create] Created (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms5yolov10s/conv45_134 | timeout: 10s)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms4yolov10s/conv48_134 | timeout: 10s)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms1yolov10s/conv56_134 | timeout: 10s)
+[2025-12-30 17:38:33.949] [1885408] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000)
+[2025-12-30 17:38:33.950] [1885408] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms0yolov10s/conv59_134 | timeout: 10s)
+[2025-12-30 17:38:33.950] [1885408] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720)
+[2025-12-30 17:38:33.950] [1885408] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms3yolov10s/conv66_134 | timeout: 10s)
+[2025-12-30 17:38:33.950] [1885408] [Hailo[2025-12-30 17:49:35.643] [1890783] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 17:49:35.667] [1890783] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 17:49:35.667] [1890783] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 17:49:35.667] [1890783] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 17:49:35.684] [1890783] [HailoRT] [info] [internal_buffer_manager.cpp:77] [print_execution_results] Planned internal buffer memory: CMA=0 CMA-Desc=327680 Pinned=4147200. memory to edge layer usage factor is 1
+[2025-12-30 17:49:35.684] [1890783] [HailoRT] [info] [internal_buffer_manager.cpp:86] [print_execution_results] Default Internal buffer planner executed successfully
+[2025-12-30 17:49:35.707] [1890783] [HailoRT] [info] [device_internal.cpp:57] [configure] Configuring HEF took 30.155742 milliseconds
+[2025-12-30 17:49:35.746] [1890783] [HailoRT] [info] [vdevice.cpp:779] [configure] Configuring HEF on VDevice took 70.044262 milliseconds
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [edge_elements.cpp:52] [create] Created (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [queue_elements.cpp:284] [create] Created (PushQEl2yolov10s/input_layer1 | timeout: 10s)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [filter_elements.cpp:101] [create] Created (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3))
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [vstream.cpp:754] [InputVStreamImpl] Creating yolov10s/input_layer1...
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [vstream_builder.cpp:102] [create_inputs] Input pipeline 'yolov10s/input_layer1': (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3)) >> (PushQEl2yolov10s/input_layer1 | timeout: 10s) >> (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800) >> HW
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [multi_io_elements.cpp:135] [create] Created (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms5yolov10s/conv45_134 | timeout: 10s)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms4yolov10s/conv48_134 | timeout: 10s)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms1yolov10s/conv56_134 | timeout: 10s)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms0yolov10s/conv59_134 | timeout: 10s)
+[2025-12-30 17:49:35.747] [1890783] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720)
+[2025-12-30 17:49:35.748] [1890783] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms3yolov10s/conv66_134 | timeout: 10s)
+[2025-12-30 17:49:35.748] [1890783] [Hailo[2025-12-30 17:50:32.377] [1891375] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 17:50:32.399] [1891375] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 17:50:32.399] [1891375] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 17:50:32.399] [1891375] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 17:50:32.416] [1891375] [HailoRT] [info] [internal_buffer_manager.cpp:77] [print_execution_results] Planned internal buffer memory: CMA=0 CMA-Desc=327680 Pinned=4147200. memory to edge layer usage factor is 1
+[2025-12-30 17:50:32.416] [1891375] [HailoRT] [info] [internal_buffer_manager.cpp:86] [print_execution_results] Default Internal buffer planner executed successfully
+[2025-12-30 17:50:32.439] [1891375] [HailoRT] [info] [device_internal.cpp:57] [configure] Configuring HEF took 30.482864 milliseconds
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [vdevice.cpp:779] [configure] Configuring HEF on VDevice took 70.085543 milliseconds
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [edge_elements.cpp:52] [create] Created (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [queue_elements.cpp:284] [create] Created (PushQEl2yolov10s/input_layer1 | timeout: 10s)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [filter_elements.cpp:101] [create] Created (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3))
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [vstream.cpp:754] [InputVStreamImpl] Creating yolov10s/input_layer1...
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [vstream_builder.cpp:102] [create_inputs] Input pipeline 'yolov10s/input_layer1': (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3)) >> (PushQEl2yolov10s/input_layer1 | timeout: 10s) >> (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800) >> HW
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [multi_io_elements.cpp:135] [create] Created (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms5yolov10s/conv45_134 | timeout: 10s)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms4yolov10s/conv48_134 | timeout: 10s)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms1yolov10s/conv56_134 | timeout: 10s)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms0yolov10s/conv59_134 | timeout: 10s)
+[2025-12-30 17:50:32.479] [1891375] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720)
+[2025-12-30 17:50:32.480] [1891375] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms3yolov10s/conv66_134 | timeout: 10s)
+[2025-12-30 17:50:32.480] [1891375] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl2yolov10s/conv69_134 | hw_frame_size: 38400)
+[2025-12-30 17:50:32.480] [1891375] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms2yolov10s/conv69_134 | timeout: 10s)
+[2025-12-30 17:50:32.480] [1891375] [HailoRT] [info] [queue_elements.cpp:800] [create] Created (UserBufQEl_post_infer0yolov10s/yolov8_nms_postprocess | timeout: 10s)
+[2025-12-30 17:50:32.480] [1891375] [HailoRT] [info] [vstream.cpp:1114] [OutputVStreamImpl] Creating yolov10s/yolov8_nms_postprocess...
+[2025-12-30 17:50:32.480] [1891375] [HailoRT] [info] [vstream_builder.cpp:622] [create_output_post_process_nms] Output pipeline 'yolov10s/yolov8_nms_postprocess': HW >> (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600) >> (PullQEl_nms5yolov10s/conv45_134) >> (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000) >> (PullQEl_nms4yolov10s/conv48_134) >> (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400) >> (PullQEl_nms1yolov10s/conv56_134) >> (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000) >> (PullQEl_nms0yolov10s/conv59_134) >> (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720) >> (PullQEl_nms3yolov10s/conv66_134) >> (HwReadEl2yolov10s/conv69_134 | hw_frame_size: 38400) >> (PullQEl_nms2yolov10s/conv69_134) >> (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640) >> (UserBufQEl_post_infer0yolov10s/yolov8_nms_postprocess | timeout: 10s)
+[2025-12-30 17:58:27.855] [1898133] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 17:58:27.875] [1898133] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 17:58:27.875] [1898133] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 17:58:27.875] [1898133] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 17:58:27.903] [1898133] [HailoRT] [info] [internal_buffer_manager.cpp:77] [print_execution_results] Planned internal buffer memory: CMA=0 CMA-Desc=851968 Pinned=7835648. memory to edge layer usage factor is 0.89460456
+[2025-12-30 17:58:27.903] [1898133] [HailoRT] [info] [internal_buffer_manager.cpp:86] [print_execution_results] Default Internal buffer planner executed successfully
+[2025-12-30 17:58:27.953] [1898133] [HailoRT] [info] [device_internal.cpp:57] [configure] Configuring HEF took 59.40234 milliseconds
+[2025-12-30 17:58:27.992] [1898133] [HailoRT] [info] [vdevice.cpp:779] [configure] Configuring HEF on VDevice took 99.140728 milliseconds
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [edge_elements.cpp:52] [create] Created (HwWriteEl2yolov11m/input_layer1 | hw_frame_size: 1228800)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [queue_elements.cpp:284] [create] Created (PushQEl2yolov11m/input_layer1 | timeout: 10s)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [filter_elements.cpp:101] [create] Created (PreInferEl2yolov11m/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3))
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [vstream.cpp:754] [InputVStreamImpl] Creating yolov11m/input_layer1...
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [vstream_builder.cpp:102] [create_inputs] Input pipeline 'yolov11m/input_layer1': (PreInferEl2yolov11m/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3)) >> (PushQEl2yolov11m/input_layer1 | timeout: 10s) >> (HwWriteEl2yolov11m/input_layer1 | hw_frame_size: 1228800) >> HW
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [multi_io_elements.cpp:135] [create] Created (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.200, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl3yolov11m/conv102_178 | hw_frame_size: 30720)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms3yolov11m/conv102_178 | timeout: 10s)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl2yolov11m/conv105_178 | hw_frame_size: 38400)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms2yolov11m/conv105_178 | timeout: 10s)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl3yolov11m/conv71_178 | hw_frame_size: 409600)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms3yolov11m/conv71_178 | timeout: 10s)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl2yolov11m/conv74_178 | hw_frame_size: 512000)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms2yolov11m/conv74_178 | timeout: 10s)
+[2025-12-30 17:58:27.993] [1898133] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl1yolov11m/conv87_178 | hw_frame_size: 102400)
+[2025-12-30 17:58:27.994] [1898133] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms1yolov11m/conv87_178 | timeout: 10s)
+[2025-12-30 17:58:27.994] [1898133] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl0yolov11m/conv90_178 | hw_frame_size: 128000)
+[2025-12-30 17:58:27.994] [1898133] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms0yolov11m/conv90_178 | timeout: 10s)
+[2025-12-30 17:58:27.994] [1898133] [HailoRT] [info] [queue_elements.cpp:800] [create] Created (UserBufQEl_post_infer0yolov11m/yolov8_nms_postprocess | timeout: 10s)
+[2025-12-30 17:58:27.994] [1898133] [HailoRT] [info] [vstream.cpp:1114] [OutputVStreamImpl] Creating yolov11m/yolov8_nms_postprocess...
+[2025-12-30 17:58:27.994] [1898133] [HailoRT] [info] [vstream_builder.cpp:622] [create_output_post_process_nms] Output pipeline 'yolov11m/yolov8_nms_postprocess': HW >> (HwReadEl3yolov11m/conv102_178 | hw_frame_size: 30720) >> (PullQEl_nms3yolov11m/conv102_178) >> (HwReadEl2yolov11m/conv105_178 | hw_frame_size: 38400) >> (PullQEl_nms2yolov11m/conv105_178) >> (HwReadEl3yolov11m/conv71_178 | hw_frame_size: 409600) >> (PullQEl_nms3yolov11m/conv71_178) >> (HwReadEl2yolov11m/conv74_178 | hw_frame_size: 512000) >> (PullQEl_nms2yolov11m/conv74_178) >> (HwReadEl1yolov11m/conv87_178 | hw_frame_size: 102400) >> (PullQEl_nms1yolov11m/conv87_178) >> (HwReadEl0yolov11m/conv90_178 | hw_frame_size: 128000) >> (PullQEl_nms0yolov11m/conv90_178) >> (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.200, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640) >> (UserBufQEl_post_infer0yolov11m/yolov8_nms_postprocess | timeout: 10s)
+[2025-12-30 17:58:54.097] [1898871] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 17:58:54.115] [1898871] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 17:58:54.115] [1898871] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 17:58:54.115] [1898871] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 17:58:54.125] [1898871] [HailoRT] [info] [internal_buffer_manager.cpp:75] [print_execution_results] Default Internal buffer planner failed to meet requirements
+[2025-12-30 17:58:54.125] [1898871] [HailoRT] [info] [internal_buffer_manager.cpp:86] [print_execution_results] Default Internal buffer planner executed successfully
+[2025-12-30 17:58:54.136] [1898871] [HailoRT] [info] [device_internal.cpp:57] [configure] Configuring HEF took 15.8181 milliseconds
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [vdevice.cpp:779] [configure] Configuring HEF on VDevice took 34.577092 milliseconds
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [edge_elements.cpp:52] [create] Created (HwWriteEl14tiny_yolov4/input_layer1 | hw_frame_size: 519168)
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [vstream.cpp:754] [InputVStreamImpl] Creating tiny_yolov4/input_layer1...
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [vstream_builder.cpp:102] [create_inputs] Input pipeline 'tiny_yolov4/input_layer1': (HwWriteEl14tiny_yolov4/input_layer1 | hw_frame_size: 519168) >> HW
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl13tiny_yolov4/conv19 | hw_frame_size: 86528)
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_hw_read13tiny_yolov4/conv19)
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [filter_elements.cpp:372] [create] Created (PostInferEl13tiny_yolov4/conv19 | Reorder - src_order: FCR, src_shape: (13, 13, 256), dst_order: FCR, dst_shape: (13, 13, 255) | Padding Periph shape - src_shape: (13, 13, 256), dst_shape: (13, 13, 255))
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [queue_elements.cpp:800] [create] Created (UserBuffQEl13tiny_yolov4/conv19 | timeout: 10s)
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [vstream.cpp:1114] [OutputVStreamImpl] Creating tiny_yolov4/conv19...
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [vstream_builder.cpp:220] [create_outputs] Output pipeline 'tiny_yolov4/conv19': HW >> (HwReadEl13tiny_yolov4/conv19 | hw_frame_size: 86528) >> (PullQEl_hw_read13tiny_yolov4/conv19) >> (PostInferEl13tiny_yolov4/conv19 | Reorder - src_order: FCR, src_shape: (13, 13, 256), dst_order: FCR, dst_shape: (13, 13, 255) | Padding Periph shape - src_shape: (13, 13, 256), dst_shape: (13, 13, 255)) >> (UserBuffQEl13tiny_yolov4/conv19 | timeout: 10s)
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl12tiny_yolov4/conv21 | hw_frame_size: 346112)
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_hw_read12tiny_yolov4/conv21)
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [filter_elements.cpp:372] [create] Created (PostInferEl12tiny_yolov4/conv21 | Reorder - src_order: FCR, src_shape: (26, 26, 256), dst_order: FCR, dst_shape: (26, 26, 255))
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [queue_elements.cpp:800] [create] Created (UserBuffQEl12tiny_yolov4/conv21 | timeout: 10s)
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [vstream.cpp:1114] [OutputVStreamImpl] Creating tiny_yolov4/conv21...
+[2025-12-30 17:58:54.155] [1898871] [HailoRT] [info] [vstream_builder.cpp:220] [create_outputs] Output pipeline 'tiny_yolov4/conv21': HW >> (HwReadEl12tiny_yolov4/conv21 | hw_frame_size: 346112) >> (PullQEl_hw_read12tiny_yolov4/conv21) >> (PostInferEl12tiny_yolov4/conv21 | Reorder - src_order: FCR, src_shape: (26, 26, 256), dst_order: FCR, dst_shape: (26, 26, 255)) >> (UserBuffQEl12tiny_yolov4/conv21 | timeout: 10s)
+[2025-12-30 17:58:54.233] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.268] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.268] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.334] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.334] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.367] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.367] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.401] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.401] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.434] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.434] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.534] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.534] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.567] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.567] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.601] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.601] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.630] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.630] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.663] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.663] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.730] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.730] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.763] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.763] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.797] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.797] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.830] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.830] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.863] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.863] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.897] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.897] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.930] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.930] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.963] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.963] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:54.997] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:54.997] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.034] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.034] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.063] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.063] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.101] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.101] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.134] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.134] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.167] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.167] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.267] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.267] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.334] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.334] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.367] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.367] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.401] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.401] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.434] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.434] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.534] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.534] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.567] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.567] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.601] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.601] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.634] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.634] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.667] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.667] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.767] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.768] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.801] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.801] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.834] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.834] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.867] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.867] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.901] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.901] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.934] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.934] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:55.967] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:55.967] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.001] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.001] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.034] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.034] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.067] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.067] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.101] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.101] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.134] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.134] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.167] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.167] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.267] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.267] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.330] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.330] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.367] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.367] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.397] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.397] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.430] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.430] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.463] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.463] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.497] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.497] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.530] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.530] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.567] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.568] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.601] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.601] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.634] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.634] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.663] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.663] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.697] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.697] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.763] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.763] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.801] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.801] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.830] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.830] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.863] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.863] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.897] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.897] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.930] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.930] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:56.963] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:56.963] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.001] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.001] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.030] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.030] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.063] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.063] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.097] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.097] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.130] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.130] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.167] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.167] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.267] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.267] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.334] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.334] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.363] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.363] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.397] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.397] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.430] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.430] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.468] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.530] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.530] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.567] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.567] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.597] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.597] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.634] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.634] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.667] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.667] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.763] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.763] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.801] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.801] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.834] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.834] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.863] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.863] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.897] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.897] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.934] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.934] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.963] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.963] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:57.997] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:57.997] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.030] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.030] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.067] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.067] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.097] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.097] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.130] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.130] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.163] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.163] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.230] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.230] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.263] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.263] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.330] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.330] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.367] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.368] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.397] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.397] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.430] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.430] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.530] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.530] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.568] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.568] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.597] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.597] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.630] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.630] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.668] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.668] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.697] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.697] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.767] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.768] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.797] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.797] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.834] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.834] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.867] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.867] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.901] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.901] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.934] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.934] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.963] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.963] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:58.997] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:58.997] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.030] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.030] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.067] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.068] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.101] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.101] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.130] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.130] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.167] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.168] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.263] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.263] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.330] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.330] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.363] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.363] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.401] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.401] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.434] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.434] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.463] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.463] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.530] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.530] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.563] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.563] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.597] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.597] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.630] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.630] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.667] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.667] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.768] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.768] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.801] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.801] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.834] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.834] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.868] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.868] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.901] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.901] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.934] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.934] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:58:59.967] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:58:59.967] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.001] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.001] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.034] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.034] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.067] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.067] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.101] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.101] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.134] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.134] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.168] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.168] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.201] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.234] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.268] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.268] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.301] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.334] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.334] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.367] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.368] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.401] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.401] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.434] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.434] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.467] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.501] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.534] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.534] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.567] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.568] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.601] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.601] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.634] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.634] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.667] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.668] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.701] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.734] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 17:59:00.767] [1898885] [HailoRT] [error] [inference_pipeline.cpp:80] [verify_network_inputs_and_outputs] CHECK failed - Not all outputs have been provided for network tiny_yolov4/tiny_yolov4
+[2025-12-30 17:59:00.768] [1898885] [HailoRT] [error] [inference_pipeline.cpp:198] [infer] CHECK_SUCCESS failed with status=HAILO_INVALID_ARGUMENT(2)
+[2025-12-30 18:10:49.786] [1902759] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 18:10:49.803] [1902759] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 18:10:49.803] [1902759] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 18:10:49.803] [1902759] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 18:10:49.820] [1902759] [HailoRT] [info] [internal_buffer_manager.cpp:77] [print_execution_results] Planned internal buffer memory: CMA=0 CMA-Desc=327680 Pinned=4147200. memory to edge layer usage factor is 1
+[2025-12-30 18:10:49.820] [1902759] [HailoRT] [info] [internal_buffer_manager.cpp:86] [print_execution_results] Default Internal buffer planner executed successfully
+[2025-12-30 18:10:49.845] [1902759] [HailoRT] [info] [device_internal.cpp:57] [configure] Configuring HEF took 32.251531 milliseconds
+[2025-12-30 18:10:49.886] [1902759] [HailoRT] [info] [vdevice.cpp:779] [configure] Configuring HEF on VDevice took 73.395789 milliseconds
+[2025-12-30 18:10:49.886] [1902759] [HailoRT] [info] [edge_elements.cpp:52] [create] Created (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800)
+[2025-12-30 18:10:49.886] [1902759] [HailoRT] [info] [queue_elements.cpp:284] [create] Created (PushQEl2yolov10s/input_layer1 | timeout: 10s)
+[2025-12-30 18:10:49.886] [1902759] [HailoRT] [info] [filter_elements.cpp:101] [create] Created (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3))
+[2025-12-30 18:10:49.886] [1902759] [HailoRT] [info] [vstream.cpp:754] [InputVStreamImpl] Creating yolov10s/input_layer1...
+[2025-12-30 18:10:49.886] [1902759] [HailoRT] [info] [vstream_builder.cpp:102] [create_inputs] Input pipeline 'yolov10s/input_layer1': (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3)) >> (PushQEl2yolov10s/input_layer1 | timeout: 10s) >> (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800) >> HW
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [multi_io_elements.cpp:135] [create] Created (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms5yolov10s/conv45_134 | timeout: 10s)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms4yolov10s/conv48_134 | timeout: 10s)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms1yolov10s/conv56_134 | timeout: 10s)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms0yolov10s/conv59_134 | timeout: 10s)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms3yolov10s/conv66_134 | timeout: 10s)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl2yolov10s/conv69_134 | hw_frame_size: 38400)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms2yolov10s/conv69_134 | timeout: 10s)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [queue_elements.cpp:800] [create] Created (UserBufQEl_post_infer0yolov10s/yolov8_nms_postprocess | timeout: 10s)
+[2025-12-30 18:10:49.887] [1902759] [HailoRT] [info] [vstream.cpp:1114] [OutputVStreamImpl] Creating yolov10s/yolov8_nms_postprocess...
+[2025-12-30 18:10:49.888] [1902759] [HailoRT] [info] [vstream_builder.cpp:622] [create_output_post_process_nms] Output pipeline 'yolov10s/yolov8_nms_postprocess': HW >> (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600) >> (PullQEl_nms5yolov10s/conv45_134) >> (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000) >> (PullQEl_nms4yolov10s/conv48_134) >> (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400) >> (PullQEl_nms1yolov10s/conv56_134) >> (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000) >> (PullQEl_nms0yolov10s/conv59_134) >> (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720) >> (PullQEl_nms3yolov10s/conv66_134) >> (HwReadEl2yolov10s/conv69_134 | hw_frame_size: 38400) >> (PullQEl_nms2yolov10s/conv69_134) >> (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640) >> (UserBufQEl_post_infer0yolov10s/yolov8_nms_postprocess | timeout: 10s)
+[2025-12-30 18:11:41.679] [1904100] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 18:11:41.699] [1904100] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 18:11:41.699] [1904100] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 18:11:41.699] [1904100] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 18:11:41.716] [1904100] [HailoRT] [info] [internal_buffer_manager.cpp:77] [print_execution_results] Planned internal buffer memory: CMA=0 CMA-Desc=327680 Pinned=4147200. memory to edge layer usage factor is 1
+[2025-12-30 18:11:41.716] [1904100] [HailoRT] [info] [internal_buffer_manager.cpp:86] [print_execution_results] Default Internal buffer planner executed successfully
+[2025-12-30 18:11:41.741] [1904100] [HailoRT] [info] [device_internal.cpp:57] [configure] Configuring HEF took 32.382854 milliseconds
+[2025-12-30 18:11:41.782] [1904100] [HailoRT] [info] [vdevice.cpp:779] [configure] Configuring HEF on VDevice took 73.596874 milliseconds
+[2025-12-30 18:11:41.782] [1904100] [HailoRT] [info] [edge_elements.cpp:52] [create] Created (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [queue_elements.cpp:284] [create] Created (PushQEl2yolov10s/input_layer1 | timeout: 10s)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [filter_elements.cpp:101] [create] Created (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3))
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [vstream.cpp:754] [InputVStreamImpl] Creating yolov10s/input_layer1...
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [vstream_builder.cpp:102] [create_inputs] Input pipeline 'yolov10s/input_layer1': (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3)) >> (PushQEl2yolov10s/input_layer1 | timeout: 10s) >> (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800) >> HW
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [multi_io_elements.cpp:135] [create] Created (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms5yolov10s/conv45_134 | timeout: 10s)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms4yolov10s/conv48_134 | timeout: 10s)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms1yolov10s/conv56_134 | timeout: 10s)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms0yolov10s/conv59_134 | timeout: 10s)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720)
+[2025-12-30 18:11:41.783] [1904100] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms3yolov10s/conv66_134 | timeout: 10s)
+[2025-12-30 18:11:41.783] [1904100] [Hailo[2025-12-30 18:23:56.468] [1908236] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2025-12-30 18:23:56.487] [1908236] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2025-12-30 18:23:56.487] [1908236] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2025-12-30 18:23:56.487] [1908236] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:03:00.0
+[2025-12-30 18:23:56.504] [1908236] [HailoRT] [info] [internal_buffer_manager.cpp:77] [print_execution_results] Planned internal buffer memory: CMA=0 CMA-Desc=327680 Pinned=4147200. memory to edge layer usage factor is 1
+[2025-12-30 18:23:56.504] [1908236] [HailoRT] [info] [internal_buffer_manager.cpp:86] [print_execution_results] Default Internal buffer planner executed successfully
+[2025-12-30 18:23:56.529] [1908236] [HailoRT] [info] [device_internal.cpp:57] [configure] Configuring HEF took 32.348264 milliseconds
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [vdevice.cpp:779] [configure] Configuring HEF on VDevice took 75.074267 milliseconds
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [edge_elements.cpp:52] [create] Created (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800)
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [queue_elements.cpp:284] [create] Created (PushQEl2yolov10s/input_layer1 | timeout: 10s)
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [filter_elements.cpp:101] [create] Created (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3))
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [vstream.cpp:754] [InputVStreamImpl] Creating yolov10s/input_layer1...
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [vstream_builder.cpp:102] [create_inputs] Input pipeline 'yolov10s/input_layer1': (PreInferEl2yolov10s/input_layer1 | Reorder - src_order: NHWC, src_shape: (640, 640, 3), dst_order: NHCW, dst_shape: (640, 640, 3)) >> (PushQEl2yolov10s/input_layer1 | timeout: 10s) >> (HwWriteEl2yolov10s/input_layer1 | hw_frame_size: 1228800) >> HW
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [multi_io_elements.cpp:135] [create] Created (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640)
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600)
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms5yolov10s/conv45_134 | timeout: 10s)
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000)
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms4yolov10s/conv48_134 | timeout: 10s)
+[2025-12-30 18:23:56.572] [1908236] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms1yolov10s/conv56_134 | timeout: 10s)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms0yolov10s/conv59_134 | timeout: 10s)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms3yolov10s/conv66_134 | timeout: 10s)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [edge_elements.cpp:287] [create] Created (HwReadEl2yolov10s/conv69_134 | hw_frame_size: 38400)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [queue_elements.cpp:657] [create] Created (PullQEl_nms2yolov10s/conv69_134 | timeout: 10s)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [queue_elements.cpp:800] [create] Created (UserBufQEl_post_infer0yolov10s/yolov8_nms_postprocess | timeout: 10s)
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [vstream.cpp:1114] [OutputVStreamImpl] Creating yolov10s/yolov8_nms_postprocess...
+[2025-12-30 18:23:56.573] [1908236] [HailoRT] [info] [vstream_builder.cpp:622] [create_output_post_process_nms] Output pipeline 'yolov10s/yolov8_nms_postprocess': HW >> (HwReadEl5yolov10s/conv45_134 | hw_frame_size: 409600) >> (PullQEl_nms5yolov10s/conv45_134) >> (HwReadEl4yolov10s/conv48_134 | hw_frame_size: 512000) >> (PullQEl_nms4yolov10s/conv48_134) >> (HwReadEl1yolov10s/conv56_134 | hw_frame_size: 102400) >> (PullQEl_nms1yolov10s/conv56_134) >> (HwReadEl0yolov10s/conv59_134 | hw_frame_size: 128000) >> (PullQEl_nms0yolov10s/conv59_134) >> (HwReadEl3yolov10s/conv66_134 | hw_frame_size: 30720) >> (PullQEl_nms3yolov10s/conv66_134) >> (HwReadEl2yolov10s/conv69_134 | hw_frame_size: 38400) >> (PullQEl_nms2yolov10s/conv69_134) >> (NmsPPMuxEl0YOLOV8-Post-Process | Op YOLOV8, Name: YOLOV8-Post-Process, Score threshold: 0.300, IoU threshold: 0.70, Classes: 80, Max bboxes per class: 100, Image height: 640, Image width: 640) >> (UserBufQEl_post_infer0yolov10s/yolov8_nms_postprocess | timeout: 10s)
+[2026-01-03 06:51:46.561] [10] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [driver_os_specific.cpp:34] [open_device_file] CHECK failed - Failed to open device file /dev/hailo0 with error 2
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [hailort_driver.cpp:180] [create] CHECK_SUCCESS failed with status=HAILO_DRIVER_OPERATION_FAILED(36)
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [pcie_device.cpp:91] [create] CHECK_SUCCESS failed with status=HAILO_DRIVER_OPERATION_FAILED(36)
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [device.cpp:130] [create_pcie] CHECK_SUCCESS failed with status=HAILO_DRIVER_OPERATION_FAILED(36)
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [vdevice.cpp:836] [create_devices] CHECK_SUCCESS failed with status=HAILO_DRIVER_OPERATION_FAILED(36)
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [vdevice.cpp:661] [create] CHECK_SUCCESS failed with status=HAILO_DRIVER_OPERATION_FAILED(36)
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [shared_resource_manager.hpp:81] [register_resource] CHECK_SUCCESS failed with status=HAILO_DRIVER_OPERATION_FAILED(36)
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [vdevice.cpp:133] [create] CHECK_SUCCESS failed with status=HAILO_DRIVER_OPERATION_FAILED(36)
+[2026-01-03 06:51:46.563] [10] [HailoRT] [error] [vdevice.cpp:566] [create] CHECK_SUCCESS failed with status=HAILO_DRIVER_OPERATION_FAILED(36)
+[2026-01-04 04:26:57.105] [17] [HailoRT] [info] [vdevice.cpp:535] [create] Creating vdevice with params: device_count: 1, scheduling_algorithm: ROUND_ROBIN, multi_process_service: false
+[2026-01-04 04:26:57.128] [17] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 5.15.23-ampere-lts-standard #1 SMP PREEMPT Mon Apr 25 12:10:09 UTC 2022 aarch64
+[2026-01-04 04:26:57.128] [17] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.21.0
+[2026-01-04 04:26:57.128] [17] [HailoRT] [info] [vdevice.cpp:681] [create] VDevice Infos: 0000:06:00.0
+[2026-01-04 04:26:57.129] [17] [HailoRT] [error] [file_utils.cpp:124] [open] CHECK failed - Failed opening file, path: yolov10s.hef
+[2026-01-04 04:26:57.130] [17] [HailoRT] [error] [hef.cpp:560] [parse_hef_file] CHECK_SUCCESS failed with status=HAILO_OPEN_FILE_FAILURE(13)
+[2026-01-04 04:26:57.130] [17] [HailoRT] [error] [hef.cpp:1060] [Impl] Failed parsing HEF file
+[2026-01-04 04:26:57.130] [17] [HailoRT] [error] [hef.cpp:333] [create] Failed creating HEF
+[2026-01-04 04:26:57.130] [17] [HailoRT] [error] [hef.cpp:168] [create] CHECK_SUCCESS failed with status=HAILO_OPEN_FILE_FAILURE(13)
