@@ -102,6 +102,8 @@ Run the camera overlay binary on a system with a display connected to the board.
 ```bash
 $ cd build/camera
 $ ./camera_overlay
+# To use a different camera pass the path of the file descriptor of the camera
+# e.g., $ ./camera_overlay /dev/video101
 ```
 
 ---

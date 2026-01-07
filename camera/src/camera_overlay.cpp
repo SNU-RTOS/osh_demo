@@ -59,7 +59,7 @@ static void draw_rect_rgb(std::vector<uint8_t>& rgb, int w, int h,
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char *argv[]) {
     gst_init(&argc, &argv);
 
     const uint32_t W  = comm::IMG_W;
@@ -82,9 +82,9 @@ int main(int argc, char** argv) {
     sock.set_nonblocking(true);
 
     // Capture pipeline (appsink)
-    std::string dev = "/dev/video100";
+    const char *dev = (argc >= 2) ? argv[1] : "/dev/video100";
     std::string capture_desc =
-        "v4l2src device=" + dev +
+        "v4l2src device=" + std::string(dev) +
         " ! videoconvert ! videoscale "
         " ! video/x-raw,format=RGB,width=640,height=640 "
         " ! appsink name=sink emit-signals=false max-buffers=1 drop=true sync=false";
