@@ -43,7 +43,7 @@ struct FrameReadyMsg {
     uint32_t channels;    // 3
     uint32_t size_bytes;  // width*height*channels
     uint64_t seq;         // per-camera sequence
-    uint64_t pts_ns;      // timestamp
+    uint64_t cap_ns;   // capture timestamp
 };
 
 struct DetsReadyMsg {
@@ -53,7 +53,7 @@ struct DetsReadyMsg {
     uint32_t det_count;   // number of detections
     uint32_t _reserved;
     uint64_t seq;         // per-camera sequence
-    uint64_t pts_ns;      // timestamp
+    uint64_t cap_ns;        // not in use
 };
 #pragma pack(pop)
 
@@ -65,7 +65,7 @@ struct DetsReadyMsg {
 #pragma pack(push, 1)
 struct RgbSlotHeader {
     uint64_t seq;        // per-camera sequence
-    uint64_t pts_ns;
+    uint64_t pts_ns;    // not in use
     uint32_t cam_id;
     uint32_t width;
     uint32_t height;
@@ -92,7 +92,10 @@ static constexpr uint32_t MAX_DETS = 256;
 #pragma pack(push, 1)
 struct DetSlotHeader {
     uint64_t seq;        // per-camera sequence
-    uint64_t pts_ns;
+    uint64_t cap_ns;    // capture timestamp
+    uint64_t start_infer_ns;  // inference read timestamp
+    uint64_t end_infer_ns;  // inference completion timestamp
+    uint64_t det_push_ns;   // det push timestamp
     uint32_t cam_id;
     uint32_t det_count;  // <= MAX_DETS
 };

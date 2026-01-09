@@ -8,6 +8,7 @@
 #include <map>
 #include <mutex>
 #include <condition_variable>
+#include <chrono>
 #include <string>
 #include <thread>
 #include <vector>
@@ -18,6 +19,11 @@
 #include "util.hpp"
 
 #include "hailo/hailort.hpp"
+
+static inline uint64_t now_steady_ns() {
+    auto now = std::chrono::steady_clock::now().time_since_epoch();
+    return (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
+}
 
 using namespace hailort;
 
@@ -234,11 +240,13 @@ int main(int argc, char** argv)
                 std::memcpy(in_vec.data(), rgb, in_vec.size());
 
                 // Run inference
+                auto start_infer_ns = now_steady_ns();
                 auto status = inst.infer_vstreams->infer(inst.in_views, inst.out_views, 1);
                 if (HAILO_SUCCESS != status) {
                     std::cerr << "[infer] infer failed cam=" << cam_id << " status=" << status << "\n";
                     continue;
                 }
+                auto end_infer_ns = now_steady_ns();
 
                 uint8_t* out_ptr = inst.out_bufs[inst.out_name].data();
                 auto dets = util::decode_hailo_nms_by_class_f32(
@@ -256,7 +264,10 @@ int main(int argc, char** argv)
                 const uint32_t count = (uint32_t)std::min<size_t>(dets.size(), comm::MAX_DETS);
 
                 dh->seq = fm.seq;
-                dh->pts_ns = fm.pts_ns;
+                dh->cap_ns = fm.cap_ns;
+                dh->start_infer_ns = start_infer_ns;
+                dh->end_infer_ns = end_infer_ns;
+                dh->det_push_ns = now_steady_ns();
                 dh->cam_id = cam_id;
                 dh->det_count = count;
 
@@ -280,9 +291,7 @@ int main(int argc, char** argv)
                 dm.slot = det_slot;
                 dm.det_count = count;
                 dm.seq = fm.seq;
-                dm.pts_ns = fm.pts_ns;
-
-                // std::cout << "[CAM " << cam_id << "]: " << sizeof(dm) << std::endl;
+                dm.cap_ns = fm.cap_ns;
 
                 sock.send_to(comm::SOCK_CAMERA_PATH, &dm, sizeof(dm));
             }

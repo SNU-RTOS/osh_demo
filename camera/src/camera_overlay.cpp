@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
                 const uint64_t pts_ns = now_steady_ns();
                 const uint64_t seq = ctx.seq.fetch_add(1, std::memory_order_relaxed);
 
-                // If detections exist for this exact seq, overlay them (best-effort)
+                // If detections exist, overlay them (best-effort)
                 const uint32_t det_slot = comm::slot_index(cam_id, seq);
                 if (shm_det.slots() >= comm::TOTAL_SLOTS) {
                     const uint64_t det_seen = shm_det.read_slot_seq(det_slot);
@@ -246,6 +246,18 @@ int main(int argc, char** argv) {
                                 draw_rect(frame_rgb, (int)W, (int)H,
                                           (int)d.x0, (int)d.y0, (int)d.x1, (int)d.y1, 2);
                             }
+                            auto cur_ns = now_steady_ns();
+                            auto total_lat = cur_ns - dh->cap_ns;
+                            auto pre_lat = dh->start_infer_ns - dh->cap_ns;
+                            auto infer_lat = dh->end_infer_ns - dh->start_infer_ns;
+                            auto post_lat = cur_ns - dh->end_infer_ns;
+                            if(cam_id == 0)
+                                std::cout << "[CAM " << cam_id << "] seq=" << seq
+                                        << " dets=" << n
+                                        << " total_lat=" << total_lat / 1000000.0 << "ms"
+                                        << " (pre=" << pre_lat / 1000000.0 << "ms"
+                                        << " infer=" << infer_lat / 1000000.0 << "ms"
+                                        << " post=" << post_lat / 1000000.0 << "ms)\n";
                         }
                     // }
                 }
@@ -281,9 +293,8 @@ int main(int argc, char** argv) {
                 m.channels = CH;
                 m.size_bytes = image_bytes;
                 m.seq = seq;
-                m.pts_ns = pts_ns;
+                m.cap_ns = pts_ns;
 
-                std::cout << "sizeof(FrameReadyMsg): " << sizeof(comm::FrameReadyMsg) << " sizeof(m): " << sizeof(m) << std::endl;
                 sock.send_to(comm::SOCK_INFER_PATH, &m, sizeof(m));
 
                 // Push to display for this cam
@@ -296,6 +307,8 @@ int main(int argc, char** argv) {
                 } else {
                     gst_buffer_unref(outbuf);
                 }
+
+                // Log results
 
                 // Drain det notifications sometimes (non-blocking, not required)
                 for (int k = 0; k < 4; ++k) {

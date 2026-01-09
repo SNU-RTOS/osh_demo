@@ -7,12 +7,32 @@ This document describes the step-by-step procedure to build and run the OSH demo
 
 ---
 
+## 0. Change the work directory of k3s
+If there is no ephemeral storage left for k3s to use, you can move the working directory of k3s with the following commands.
+
+```bash
+sudo systemctl stop k3s
+sudo mkdir -p /data/k3s # Let's assume that we are going to use the /data directory
+sudo mkdir -p /etc/systemd/system/k3s.service.d
+# Add a sysetmd override so k3s uses /data/k3s
+sudo tee /etc/systemd/system/k3s.service.d/override.conf >/dev/null <<'EOF'
+[Service]
+ExecStart=
+ExecStart=/usr/local/bin/k3s server --data-dir /data/k3s
+EOF
+# Reload system daemon and restart k3s
+sudo systemctl daemon-reload
+sudo systemctl start k3s
+```
+
+---
+
 ## 1. Upgrade K3s Version
 
 First, check the installed K3s version.
 
 ```bash
-$ k3s --version
+k3s --version
 ```
 
 If your K3s version is **lower than**:
@@ -23,8 +43,8 @@ If your K3s version is **lower than**:
 upgrade K3s as follows.
 
 ```bash
-$ systemctl stop k3s
-$ curl -sfL https://get.k3s.io | sh -
+systemctl stop k3s
+curl -sfL https://get.k3s.io | sh -
 ```
 
 ---
@@ -34,7 +54,7 @@ $ curl -sfL https://get.k3s.io | sh -
 Remove the default containerd CNI configuration to avoid conflicts.
 
 ```bash
-$ rm /etc/cni/net.d/cni-containerd-net.conf
+rm /etc/cni/net.d/cni-containerd-net.conf
 ```
 
 ---
@@ -44,7 +64,7 @@ $ rm /etc/cni/net.d/cni-containerd-net.conf
 Clone the OSH demo repository.
 
 ```bash
-$ git clone https://github.com/SNU-RTOS/osh_demo
+git clone https://github.com/SNU-RTOS/osh_demo
 ```
 
 ---
@@ -54,12 +74,12 @@ $ git clone https://github.com/SNU-RTOS/osh_demo
 Build the required binaries using CMake.
 
 ```bash
-$ cd osh-demo
-$ docker run --rm -it -v "$PWD":/workspace -w /workspace ghcr.io/snu-rtos/osh-compile /bin/bash
-$ mkdir build && cd build
-$ cmake ..
-$ make -j8
-$ exit
+cd osh-demo
+docker run --rm -it -v "$PWD":/workspace -w /workspace ghcr.io/snu-rtos/osh-compile /bin/bash
+mkdir build && cd build
+cmake ..
+make -j8
+exit
 ```
 
 ---
@@ -69,7 +89,7 @@ $ exit
 Deploy the Hailo device plugin to expose the NPU resource to Kubernetes.
 
 ```bash
-$ kubectl create -f https://raw.githubusercontent.com/SNU-RTOS/hailo-device-plugin/main/deploy/hailo-device-plugin.yaml
+kubectl create -f https://raw.githubusercontent.com/SNU-RTOS/hailo-device-plugin/main/deploy/hailo-device-plugin.yaml
 ```
 
 For more details, refer to:
@@ -82,10 +102,10 @@ For more details, refer to:
 Start the inference driver pod and execute the inference binary.
 
 ```bash
-$ kubectl apply -f inference_driver.yaml
-$ kubectl exec -it inference-driver -- /bin/bash
-$ cd build/inference
-$ ./inference_driver ../../yolov10s.hef
+kubectl apply -f inference_driver.yaml
+kubectl exec -it inference-driver -- /bin/bash
+cd build/inference
+./inference_driver ../../yolov10s.hef
 ```
 
 ---
@@ -100,10 +120,8 @@ Run the camera overlay binary on a system with a display connected to the board.
 * Make sure a display is connected to the target board.
 
 ```bash
-$ cd build/camera
-$ ./camera_overlay
-# To use a different camera pass the path of the file descriptor of the camera
-# e.g., $ ./camera_overlay /dev/video101
+cd build/camera
+./camera_overlay # It will use total 8 cameras from /dev/video100 to /dev/video107
 ```
 
 ---
@@ -113,10 +131,10 @@ $ ./camera_overlay
 Verify that our Hailo Device Plugin enables access of Hailo NPUs from containers.
 
 ```bash
-$ kubectl apply -f inference_driver_without_npu.yaml
-$ kubectl exec -it inference-driver-wo-npu -- /bin/bash
-$ cd build/inference
-$ ./inference_driver ../../yolov10s.hef
+kubectl apply -f inference_driver_without_npu.yaml
+kubectl exec -it inference-driver-wo-npu -- /bin/bash
+cd build/inference
+./inference_driver ../../yolov10s.hef
 ```
 
 ---
