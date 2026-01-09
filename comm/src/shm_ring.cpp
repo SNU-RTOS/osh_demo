@@ -21,8 +21,8 @@ ShmRingProducer::ShmRingProducer(const ShmRingConfig& cfg) {
     if (cfg.name.empty() || cfg.name[0] != '/') {
         throw std::runtime_error("ShmRingProducer: name must start with '/' (POSIX shm)");
     }
-    if (cfg.slots < 1 || cfg.slots > 16) {
-        throw std::runtime_error("ShmRingProducer: slots must be 1..16");
+    if (cfg.slots < 1 || cfg.slots > 24) {
+        throw std::runtime_error("ShmRingProducer: slots must be 1..24");
     }
     if (cfg.slot_bytes == 0 || (cfg.slot_bytes % 64) != 0) {
         throw std::runtime_error("ShmRingProducer: slot_bytes must be nonzero and 64-byte aligned");
@@ -92,7 +92,7 @@ ShmRingConsumer::ShmRingConsumer(const std::string& name) {
     if (hdr_->version != SHM_VERSION) {
         throw std::runtime_error("ShmRingConsumer: version mismatch");
     }
-    if (hdr_->slots < 1 || hdr_->slots > 16) {
+    if (hdr_->slots < 1 || hdr_->slots > 24) {
         throw std::runtime_error("ShmRingConsumer: invalid slots");
     }
 

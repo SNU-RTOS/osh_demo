@@ -13,7 +13,7 @@ spec:
     # Just to run code inside the container
     - name: workdir
       hostPath:
-        path: /home/root/workspace/osh_demo
+        path: /data/osh_demo
         type: Directory
 
     # Share the socket directory with the host camera process
