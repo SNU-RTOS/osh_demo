@@ -138,3 +138,8 @@ cd build/inference
 ```
 
 ---
+
+## Error Handling
+If you encounter an error related to shared memory, run the commands in steps 6 and 7, then rerun step 6.
+
+---

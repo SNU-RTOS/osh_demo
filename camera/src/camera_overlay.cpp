@@ -194,6 +194,7 @@ int main(int argc, char** argv) {
         cap_threads.emplace_back([&, cam_id]() {
             auto& ctx = cams[cam_id];
             std::vector<uint8_t> frame_rgb(image_bytes);
+            int count = 1;
 
             while (running.load(std::memory_order_relaxed)) {
                 GstSample* sample = gst_app_sink_pull_sample(ctx.appsink);
@@ -232,6 +233,7 @@ int main(int argc, char** argv) {
 
                 // If detections exist, overlay them (best-effort)
                 const uint32_t det_slot = comm::slot_index(cam_id, seq);
+                
                 if (shm_det.slots() >= comm::TOTAL_SLOTS) {
                     const uint64_t det_seen = shm_det.read_slot_seq(det_slot);
                     // if (det_seen == seq) {
@@ -251,13 +253,17 @@ int main(int argc, char** argv) {
                             auto pre_lat = dh->start_infer_ns - dh->cap_ns;
                             auto infer_lat = dh->end_infer_ns - dh->start_infer_ns;
                             auto post_lat = cur_ns - dh->end_infer_ns;
-                            if(cam_id == 0)
+                            count++;
+                            if(cam_id == 0 && (count>=30)){
                                 std::cout << "[CAM " << cam_id << "] seq=" << seq
                                         << " dets=" << n
                                         << " total_lat=" << total_lat / 1000000.0 << "ms"
                                         << " (pre=" << pre_lat / 1000000.0 << "ms"
                                         << " infer=" << infer_lat / 1000000.0 << "ms"
                                         << " post=" << post_lat / 1000000.0 << "ms)\n";
+                                count = 0;
+                            }
+                                
                         }
                     // }
                 }
