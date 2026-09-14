@@ -203,7 +203,39 @@ loading and device contention. A failure preserves diagnostic logs and events in
 the JSON result; use `--keep` to retain the test namespace for interactive
 inspection.
 
-## 8. Run recovery checks
+## 8. Milestone: concurrent different models and NPU counts
+
+This camera-free milestone runs YOLOv10s on one NPU, Tiny YOLOv4 on two NPUs,
+and a third YOLOv10s task requesting five NPUs. It verifies model names in logs,
+exact device counts, disjoint physical IDs, Pending behavior, release, and
+continued inference by the second model.
+
+Build the second model image from the existing HEF:
+
+```sh
+docker build -f npu-task/tests/Dockerfile.probe -t npu-task-probe:local .
+docker save npu-task-probe:local | k3s ctr images import -
+mkdir -p /tmp/osh-second-probe
+cp /home/root/workspace/models/hef/tiny_yolov4.hef /tmp/osh-second-probe/
+printf '%s\n' 'FROM npu-task-probe:local' 'COPY tiny_yolov4.hef /models/tiny_yolov4.hef' >/tmp/osh-second-probe/Dockerfile
+docker build -t npu-task-probe-second:local /tmp/osh-second-probe
+docker save npu-task-probe-second:local | k3s ctr images import -
+```
+
+Run the focused test:
+
+```sh
+python3 npu-task/tests/multi_model.py \
+  --image-a npu-task-probe:local --model-a /models/yolov10s.hef --count-a 1 \
+  --image-b npu-task-probe-second:local --model-b /models/tiny_yolov4.hef --count-b 2 \
+  --count-pending 5 --output npu-task/results/multi-model.json
+```
+
+Expected output has `passed: true`; model A and model B use disjoint devices,
+and the five-NPU task starts after model A is suspended. Zero-filled inputs test
+device lifecycle and isolation, not detection accuracy.
+
+## 9. Run recovery checks
 
 This checks killed inference, device reuse, Service restart behavior, task
 deletion cascading, and optional controller/plugin rollouts. It creates and
@@ -219,7 +251,7 @@ Do not use `--restart-components` during an unrelated production workload: it
 rolls the controller and Hailo plugin. The script intentionally does not restart
 K3s. A K3s restart is a separate maintenance-window test.
 
-## 9. Inspect actual kubelet assignments
+## 10. Inspect actual kubelet assignments
 
 The node's `allocatable` value is total inventory, not currently free capacity.
 Build and run the PodResources diagnostic on the NPU node:
@@ -236,7 +268,7 @@ The output lists each pod/container and the exact `hailo.ai/npu` device IDs
 assigned by kubelet. If Go is already installed, `cd npu-task && go build -o
 bin/podresources ./cmd/podresources` is equivalent.
 
-## 10. Optional camera demo
+## 11. Optional camera demo
 
 Rebuild both binaries because the shared-memory protocol is version 2 and now
 supports all 24 camera slots:
@@ -258,7 +290,7 @@ OSH_TASK_ID=demo ./build/camera/camera_overlay
 The camera demo is model-specific and is separate from the generic `NPUTask`
 contract. It requires the existing IPC, `/tmp`, host camera, and display setup.
 
-## 11. Cleanup and rollback
+## 12. Cleanup and rollback
 
 Remove test resources before uninstalling the controller:
 

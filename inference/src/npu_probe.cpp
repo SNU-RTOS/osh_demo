@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <filesystem>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -52,7 +53,9 @@ static int infer(const std::string &model, const std::string &id, long frames, s
         ++done;
         if (std::chrono::steady_clock::now() >= next_log) {
             std::lock_guard<std::mutex> lock(output_mutex);
-            std::cout << "INFERENCE_OK device=" << id << " frames=" << done << std::endl;
+            std::cout << "INFERENCE_OK device=" << id << " model="
+                      << std::filesystem::path(model).filename().string()
+                      << " frames=" << done << std::endl;
             next_log = std::chrono::steady_clock::now() + std::chrono::seconds(1);
         }
     }
@@ -74,7 +77,8 @@ int main(int argc, char **argv) {
     }
     std::atomic<bool> failed{false}; std::vector<std::thread> workers;
     for (const auto &id : devices.value()) {
-        std::cout << "ASSIGNED_DEVICE " << id << std::endl;
+        std::cout << "ASSIGNED_DEVICE device=" << id << " model="
+                  << std::filesystem::path(argv[1]).filename().string() << std::endl;
         workers.emplace_back([&, id] {
             const int status = infer(argv[1], id, frames, failed);
             if (status != HAILO_SUCCESS) {

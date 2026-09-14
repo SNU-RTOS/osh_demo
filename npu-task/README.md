@@ -125,6 +125,11 @@ inferring, resize 4→2→4, bad HEF cleanup, 100 cycles over 1/2/4/8 devices, a
 without an allocation. Use `--second-image` and `--second-model` for another HEF.
 Use `--keep` only when retaining failed pods for diagnosis is intentional.
 Zero-input inference checks device lifecycle, not model accuracy or camera I/O.
+For the focused multi-model milestone, run `tests/multi_model.py` with the
+default YOLOv10s probe and a second image containing Tiny YOLOv4. It verifies
+different model processes, different NPU counts, disjoint physical IDs, Pending
+behavior, release, and continued inference. The complete command sequence is
+in [REPRODUCE.md](REPRODUCE.md).
 `python3 tests/recovery.py --restart-components` additionally tests killed inference,
 service container restart, cascading task deletion, and controller/plugin rollouts
 while another task continues inference. It restarts those two components; run it

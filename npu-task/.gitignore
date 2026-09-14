@@ -3,3 +3,4 @@ bin/
 results/
 __pycache__/
 assets/
+*.hef
