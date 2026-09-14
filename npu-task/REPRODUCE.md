@@ -206,7 +206,10 @@ inspection.
 ## 8. Milestone: concurrent different models and NPU counts
 
 This camera-free milestone runs YOLOv10s on one NPU, Tiny YOLOv4 on two NPUs,
-and a third YOLOv10s task requesting five NPUs. It verifies model names in logs,
+and an exact-fit YOLOv10s task requesting five NPUs. It then submits a six-NPU
+overflow task, which must remain Pending while 1 + 2 + 5 devices are occupied.
+After the one-NPU and five-NPU tasks suspend, the overflow task runs on the six
+released devices while Tiny YOLOv4 continues. It verifies model names in logs,
 exact device counts, disjoint physical IDs, Pending behavior, release, and
 continued inference by the second model.
 
@@ -228,12 +231,14 @@ Run the focused test:
 python3 npu-task/tests/multi_model.py \
   --image-a npu-task-probe:local --model-a /models/yolov10s.hef --count-a 1 \
   --image-b npu-task-probe-second:local --model-b /models/tiny_yolov4.hef --count-b 2 \
-  --count-pending 5 --output npu-task/results/multi-model.json
+  --count-fit 5 --count-overflow 6 \
+  --output npu-task/results/multi-model.json
 ```
 
-Expected output has `passed: true`; model A and model B use disjoint devices,
-and the five-NPU task starts after model A is suspended. Zero-filled inputs test
-device lifecycle and isolation, not detection accuracy.
+Expected output has `passed: true`; the five-NPU exact-fit task runs, the
+six-NPU overflow task stays Pending, and then it runs after the one- and
+five-NPU tasks release their devices. Zero-filled inputs test device lifecycle
+and isolation, not detection accuracy.
 
 ## 9. Run recovery checks
 

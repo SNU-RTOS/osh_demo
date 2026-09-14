@@ -28,7 +28,8 @@ def main():
     p.add_argument("--model-b", default="/models/tiny_yolov4.hef")
     p.add_argument("--count-a", type=int, default=1)
     p.add_argument("--count-b", type=int, default=2)
-    p.add_argument("--count-pending", type=int, default=5)
+    p.add_argument("--count-fit", type=int, default=5)
+    p.add_argument("--count-overflow", type=int, default=6)
     p.add_argument("--timeout", type=int, default=120)
     p.add_argument("--output", default="npu-task/results/multi-model.json")
     p.add_argument("--keep", action="store_true")
@@ -84,19 +85,36 @@ def main():
         result["tasks"]["model-b"] = {"pod": pod_b, "model": args.model_b,
                                          "npuCount": args.count_b, "devices": sorted(ids_b)}
 
-        submit("waiting", args.image_a, args.model_a, args.count_pending)
-        wait_phase("waiting", "Pending")
+        # 1 + 2 + 5 = 8: exact fit must become Running.
+        submit("exact-fit", args.image_a, args.model_a, args.count_fit)
+        _, pod_fit, ids_fit, logs_fit = infer("exact-fit", args.model_a, args.count_fit)
+        if not ids_fit.isdisjoint(ids_a | ids_b):
+            raise AssertionError(f"exact-fit device overlap: {ids_fit} vs {ids_a | ids_b}")
+        result["tasks"]["exact-fit"] = {"pod": pod_fit, "model": args.model_a,
+                                          "npuCount": args.count_fit, "devices": sorted(ids_fit)}
+
+        # 1 + 2 + 5 + 6 > 8: overflow must remain Pending for a stable interval.
+        submit("overflow", args.image_a, args.model_a, args.count_overflow)
+        wait_phase("overflow", "Pending")
+        pending_until = time.monotonic() + 3
+        while time.monotonic() < pending_until:
+            if get("nputask", "overflow").get("status", {}).get("phase") != "Pending":
+                raise AssertionError("overflow task scheduled despite insufficient capacity")
+            time.sleep(.5)
         kubectl("patch", "nputask", "model-a", "-n", namespace, "--type=merge",
                  "-p", '{"spec":{"suspend":true}}')
         wait_phase("model-a", "Suspended")
-        _, pod_wait, ids_wait, logs_wait = infer("waiting", args.model_a, args.count_pending)
-        if not ids_wait.isdisjoint(ids_b):
-            raise AssertionError(f"released devices overlap model B: {ids_wait} vs {ids_b}")
+        kubectl("patch", "nputask", "exact-fit", "-n", namespace, "--type=merge",
+                 "-p", '{"spec":{"suspend":true}}')
+        wait_phase("exact-fit", "Suspended")
+        _, pod_overflow, ids_overflow, logs_overflow = infer("overflow", args.model_a, args.count_overflow)
+        if not ids_overflow.isdisjoint(ids_b):
+            raise AssertionError(f"released devices overlap model B: {ids_overflow} vs {ids_b}")
         after_b = kubectl("logs", pod_b, "-n", namespace).stdout
         if len(after_b) <= len(logs_b):
             raise AssertionError("model B stopped while model A released devices")
-        result["tasks"]["waiting"] = {"pod": pod_wait, "model": args.model_a,
-                                         "npuCount": args.count_pending, "devices": sorted(ids_wait)}
+        result["tasks"]["overflow"] = {"pod": pod_overflow, "model": args.model_a,
+                                          "npuCount": args.count_overflow, "devices": sorted(ids_overflow)}
         result["passed"] = True
         print(json.dumps(result, indent=2), flush=True)
     except Exception as exc:
