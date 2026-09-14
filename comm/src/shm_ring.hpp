@@ -9,7 +9,7 @@
 namespace comm {
 
 static constexpr uint32_t SHM_MAGIC = 0x4F53484D;     // "OSHM"
-static constexpr uint32_t SHM_VERSION = 1;
+static constexpr uint32_t SHM_VERSION = 2;
 static constexpr size_t   SHM_HDR_BYTES = 4096;       // one page, aligned
 
 inline size_t align64(size_t x) { return (x + 63u) & ~size_t(63u); }
@@ -19,14 +19,14 @@ struct ShmHeader {
     uint32_t version;
     uint32_t slots;
     uint32_t slot_bytes;
-    std::atomic<uint64_t> slot_seq[16]; // supports up to 16 slots without changing header
-    uint8_t _pad[SHM_HDR_BYTES - 4*4 - 16*8];
+    std::atomic<uint64_t> slot_seq[24]; // eight cameras, three slots each
+    uint8_t _pad[SHM_HDR_BYTES - 4*4 - 24*8];
 };
 static_assert(sizeof(ShmHeader) == SHM_HDR_BYTES, "ShmHeader must be 4096 bytes");
 
 struct ShmRingConfig {
     std::string name;     // e.g. "/comm_rgb_shm"
-    uint32_t slots;       // 3..16
+    uint32_t slots;       // 1..24
     uint32_t slot_bytes;  // aligned bytes per slot
 };
 
@@ -54,7 +54,7 @@ private:
 
 class ShmRingConsumer {
 public:
-    explicit ShmRingConsumer(const std::string& name);
+    explicit ShmRingConsumer(const std::string& name, uint32_t wait_ms = 0);
     ~ShmRingConsumer();
 
     ShmRingConsumer(const ShmRingConsumer&) = delete;

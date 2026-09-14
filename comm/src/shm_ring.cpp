@@ -9,6 +9,8 @@
 #include <cerrno>
 #include <cstring>
 #include <stdexcept>
+#include <chrono>
+#include <thread>
 
 namespace comm {
 
@@ -42,13 +44,14 @@ ShmRingProducer::ShmRingProducer(const ShmRingConfig& cfg) {
     data_ = reinterpret_cast<uint8_t*>(base_) + SHM_HDR_BYTES;
 
     // Initialize header each time (simple and robust)
-    hdr_->magic = SHM_MAGIC;
+    __atomic_store_n(&hdr_->magic, 0u, __ATOMIC_RELEASE);
     hdr_->version = SHM_VERSION;
     hdr_->slots = cfg.slots;
     hdr_->slot_bytes = cfg.slot_bytes;
-    for (uint32_t i = 0; i < 16; ++i) {
+    for (uint32_t i = 0; i < 24; ++i) {
         hdr_->slot_seq[i].store(0, std::memory_order_relaxed);
     }
+    __atomic_store_n(&hdr_->magic, SHM_MAGIC, __ATOMIC_RELEASE);
 }
 
 ShmRingProducer::~ShmRingProducer() {
@@ -70,33 +73,37 @@ void ShmRingProducer::publish_slot_seq(uint32_t slot, uint64_t seq) {
     hdr_->slot_seq[slot].store(seq, std::memory_order_release);
 }
 
-ShmRingConsumer::ShmRingConsumer(const std::string& name) {
+ShmRingConsumer::ShmRingConsumer(const std::string& name, uint32_t wait_ms) {
     if (name.empty() || name[0] != '/') {
-        throw std::runtime_error("ShmRingConsumer: name must start with '/' (POSIX shm)");
+        throw std::runtime_error("ShmRingConsumer: name must start with '/'");
     }
-
-    fd_ = shm_open(name.c_str(), O_RDWR, 0666);
-    if (fd_ < 0) throw_sys("shm_open(existing)");
-
-    struct stat st{};
-    if (fstat(fd_, &st) != 0) throw_sys("fstat");
-    bytes_ = static_cast<size_t>(st.st_size);
-
-    base_ = mmap(nullptr, bytes_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);
-    if (base_ == MAP_FAILED) throw_sys("mmap");
-
-    hdr_ = reinterpret_cast<ShmHeader*>(base_);
-    if (hdr_->magic != SHM_MAGIC) {
-        throw std::runtime_error("ShmRingConsumer: bad magic (producer not initialized?)");
-    }
-    if (hdr_->version != SHM_VERSION) {
-        throw std::runtime_error("ShmRingConsumer: version mismatch");
-    }
-    if (hdr_->slots < 1 || hdr_->slots > 24) {
-        throw std::runtime_error("ShmRingConsumer: invalid slots");
-    }
-
-    data_ = reinterpret_cast<uint8_t*>(base_) + SHM_HDR_BYTES;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(wait_ms);
+    do {
+        fd_ = shm_open(name.c_str(), O_RDWR, 0666);
+        if (fd_ >= 0) {
+            struct stat st{};
+            if (fstat(fd_, &st) == 0 && st.st_size >= static_cast<off_t>(SHM_HDR_BYTES)) {
+                bytes_ = static_cast<size_t>(st.st_size);
+                base_ = mmap(nullptr, bytes_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);
+                if (base_ != MAP_FAILED) {
+                    hdr_ = reinterpret_cast<ShmHeader*>(base_);
+                    if (__atomic_load_n(&hdr_->magic, __ATOMIC_ACQUIRE) == SHM_MAGIC && hdr_->version == SHM_VERSION &&
+                        hdr_->slots >= 1 && hdr_->slots <= 24 && hdr_->slot_bytes > 0 &&
+                        hdr_->slot_bytes % 64 == 0 &&
+                        bytes_ >= SHM_HDR_BYTES + size_t(hdr_->slots) * hdr_->slot_bytes) {
+                        data_ = reinterpret_cast<uint8_t*>(base_) + SHM_HDR_BYTES;
+                        return;
+                    }
+                    munmap(base_, bytes_);
+                }
+            }
+            close(fd_);
+        }
+        fd_ = -1; base_ = nullptr; hdr_ = nullptr;
+        if (std::chrono::steady_clock::now() >= deadline) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    } while (true);
+    throw std::runtime_error("ShmRingConsumer: ring missing or incompatible: " + name);
 }
 
 ShmRingConsumer::~ShmRingConsumer() {

@@ -2,6 +2,10 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cstdlib>
+#include <string>
+#include <stdexcept>
+#include <cctype>
 
 namespace comm {
 
@@ -16,13 +20,26 @@ static constexpr uint32_t CAM_COUNT     = 8;  // /dev/video100 .. /dev/video107
 static constexpr uint32_t SLOTS_PER_CAM = 3;  // triple buffering per camera
 static constexpr uint32_t TOTAL_SLOTS   = CAM_COUNT * SLOTS_PER_CAM;
 
-// POSIX shm object names
-static constexpr const char* SHM_RGB_NAME = "/comm_rgb_shm";
-static constexpr const char* SHM_DET_NAME = "/comm_det_shm";
-
-// Unix domain datagram socket paths (must be visible to both processes)
-static constexpr const char* SOCK_CAMERA_PATH = "/tmp/oshm_camera.sock";
-static constexpr const char* SOCK_INFER_PATH  = "/tmp/oshm_infer.sock";
+// Set the same OSH_TASK_ID on a camera process and its inference task.
+// Empty preserves the legacy demo endpoints.
+inline std::string ipc_suffix() {
+    const char* raw = std::getenv("OSH_TASK_ID");
+    std::string id = raw ? raw : "";
+    if (id.size() > 48) throw std::invalid_argument("OSH_TASK_ID exceeds 48 characters");
+    for (unsigned char c : id) {
+        if (!(std::isalnum(c) || c == '-' || c == '_'))
+            throw std::invalid_argument("OSH_TASK_ID must contain letters, digits, '-' or '_'");
+    }
+    return id.empty() ? "" : "_" + id;
+}
+inline const std::string SHM_RGB_STORAGE = "/comm_rgb_shm" + ipc_suffix();
+inline const std::string SHM_DET_STORAGE = "/comm_det_shm" + ipc_suffix();
+inline const std::string SOCK_CAMERA_STORAGE = "/tmp/oshm_camera" + ipc_suffix() + ".sock";
+inline const std::string SOCK_INFER_STORAGE = "/tmp/oshm_infer" + ipc_suffix() + ".sock";
+inline const char* SHM_RGB_NAME = SHM_RGB_STORAGE.c_str();
+inline const char* SHM_DET_NAME = SHM_DET_STORAGE.c_str();
+inline const char* SOCK_CAMERA_PATH = SOCK_CAMERA_STORAGE.c_str();
+inline const char* SOCK_INFER_PATH = SOCK_INFER_STORAGE.c_str();
 
 // ----------------------------
 // Message protocol (UDS datagram)

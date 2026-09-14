@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 project(comm CXX)
 
+if(BUILD_TESTING)
+    find_package(Threads REQUIRED)
+    add_executable(shm_ring_test src/shm_ring_test.cpp src/shm_ring.cpp)
+    target_link_libraries(shm_ring_test PRIVATE Threads::Threads)
+    add_test(NAME shm_ring COMMAND shm_ring_test)
+endif()
+
 add_library(comm STATIC
     src/shm_ring.cpp
     src/uds_dgram.cpp

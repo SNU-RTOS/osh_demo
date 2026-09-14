@@ -1,0 +1,12 @@
+apiVersion: npu.snu-rtos.io/v1alpha1
+kind: NPUTask
+metadata:
+  name: local-probe
+spec:
+  image: npu-task-probe:local
+  command: [/app/npu_probe]
+  args: [$(MODEL_PATH), '10']
+  model:
+    path: /models/yolov10s.hef
+  npuCount: 2
+  mode: Batch

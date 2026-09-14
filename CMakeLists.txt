@@ -4,6 +4,8 @@ project(osh_demo CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(CTest)
+
 add_subdirectory(comm)
 add_subdirectory(camera)
 add_subdirectory(inference)

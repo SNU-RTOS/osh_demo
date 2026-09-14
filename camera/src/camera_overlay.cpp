@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
 
     // Camera produces RGB and consumes DET
     comm::ShmRingProducer shm_rgb({comm::SHM_RGB_NAME, comm::TOTAL_SLOTS, rgb_slot_bytes});
-    comm::ShmRingConsumer shm_det(comm::SHM_DET_NAME); // inference creates producer
+    comm::ShmRingConsumer shm_det(comm::SHM_DET_NAME, 5000); // inference creates producer
 
     // UDS
     comm::UdsDgram sock(comm::SOCK_CAMERA_PATH);

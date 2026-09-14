@@ -1,0 +1,32 @@
+apiVersion: npu.snu-rtos.io/v1alpha1
+kind: NPUTask
+metadata:
+  name: detector-batch
+spec:
+  # Replace with an image containing your compatible driver and compiled HEF.
+  image: registry.example.com/detector:1.0
+  command: [/app/infer]
+  args: [--model, $(MODEL_PATH), --devices, $(NPU_COUNT)]
+  model:
+    path: /models/detector.hef
+  npuCount: 2
+  mode: Batch
+  resources:
+    requests: {cpu: '1', memory: 256Mi}
+    limits: {cpu: '2', memory: 1Gi}
+---
+apiVersion: npu.snu-rtos.io/v1alpha1
+kind: NPUTask
+metadata:
+  name: classifier-service
+spec:
+  image: registry.example.com/classifier:1.0
+  command: [/app/serve]
+  args: [--model, $(MODEL_PATH), --devices, $(NPU_COUNT)]
+  model:
+    path: /models/classifier.hef
+    pvc: compiled-models
+    mountPath: /models
+  npuCount: 3
+  mode: Service
+  suspend: true

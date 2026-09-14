@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: npu-task-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: npu-task-controller
+  namespace: npu-task-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: npu-task-controller
+rules:
+  - apiGroups: [npu.snu-rtos.io]
+    resources: [nputasks]
+    verbs: [get, list, watch]
+  - apiGroups: [npu.snu-rtos.io]
+    resources: [nputasks/status]
+    verbs: [get, patch, update]
+  - apiGroups: [npu.snu-rtos.io]
+    resources: [nputasks/finalizers]
+    verbs: [update]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, create, delete]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: npu-task-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: npu-task-controller
+subjects:
+  - kind: ServiceAccount
+    name: npu-task-controller
+    namespace: npu-task-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: npu-task-leader
+  namespace: npu-task-system
+rules:
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list, watch, create, update, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: npu-task-leader
+  namespace: npu-task-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: npu-task-leader
+subjects:
+  - kind: ServiceAccount
+    name: npu-task-controller
+    namespace: npu-task-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: npu-task-controller
+  namespace: npu-task-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: npu-task-controller}
+  template:
+    metadata:
+      labels: {app: npu-task-controller}
+    spec:
+      serviceAccountName: npu-task-controller
+      containers:
+        - name: controller
+          image: npu-task-controller:m1
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef: {fieldPath: metadata.namespace}
+          ports:
+            - {name: health, containerPort: 8081}
+            - {name: metrics, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /readyz, port: health}
+          livenessProbe:
+            httpGet: {path: /healthz, port: health}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {cpu: '1', memory: 256Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities: {drop: [ALL]}

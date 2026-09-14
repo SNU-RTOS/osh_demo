@@ -1,0 +1,9 @@
+ARG HAILO_IMAGE=ghcr.io/snu-rtos/osh-compile:latest
+FROM ${HAILO_IMAGE} AS build
+WORKDIR /src
+COPY inference/src/npu_probe.cpp ./
+RUN g++ -std=c++17 -O2 -pthread npu_probe.cpp -lhailort -o /npu_probe
+FROM ${HAILO_IMAGE}
+COPY --from=build /npu_probe /app/npu_probe
+COPY yolov10s.hef /models/yolov10s.hef
+ENTRYPOINT ["/app/npu_probe"]

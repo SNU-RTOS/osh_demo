@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <csignal>
+#include <cstdlib>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -27,13 +29,15 @@ static inline uint64_t now_steady_ns() {
 
 using namespace hailort;
 
+static volatile std::sig_atomic_t stop_requested = 0;
+static void stop_handler(int) { stop_requested = 1; }
+
 struct WorkItem {
     comm::FrameReadyMsg msg{};
 };
 
 struct CamQueue {
     std::mutex m;
-    std::condition_variable cv;
     std::deque<WorkItem> q;
 };
 
@@ -55,18 +59,11 @@ struct InferInstance {
     int B = 100;
 };
 
-static Expected<InferInstance> create_infer_instance(const std::string& hef_path, uint32_t device_count)
+static Expected<InferInstance> create_infer_instance(const std::string& hef_path, const std::string& device_id)
 {
     InferInstance inst;
 
-    hailo_vdevice_params_t params;
-    auto status = hailo_init_vdevice_params(&params);
-    if (HAILO_SUCCESS != status) {
-        return make_unexpected(status);
-    }
-    params.device_count = device_count;
-
-    auto vdevice_exp = VDevice::create(params);
+    auto vdevice_exp = VDevice::create(std::vector<std::string>{device_id});
     if (!vdevice_exp) return make_unexpected(vdevice_exp.status());
     inst.vdevice = std::move(vdevice_exp.value());
 
@@ -78,17 +75,18 @@ static Expected<InferInstance> create_infer_instance(const std::string& hef_path
     if (!cfg_params) return make_unexpected(cfg_params.status());
 
     auto ngs = inst.vdevice->configure(hef, cfg_params.value());
-    if (!ngs || ngs.value().empty()) return make_unexpected(ngs.status());
+    if (!ngs) return make_unexpected(ngs.status());
+    if (ngs.value().empty()) return make_unexpected(HAILO_INTERNAL_FAILURE);
 
     inst.network_group = ngs.value().at(0);
 
     auto in_params = inst.network_group->make_input_vstream_params(
         {}, HAILO_FORMAT_TYPE_AUTO,
-        HAILO_DEFAULT_VSTREAM_TIMEOUT_MS, HAILO_DEFAULT_VSTREAM_QUEUE_SIZE);
+        1000, HAILO_DEFAULT_VSTREAM_QUEUE_SIZE);
 
     auto out_params = inst.network_group->make_output_vstream_params(
         {}, HAILO_FORMAT_TYPE_AUTO,
-        HAILO_DEFAULT_VSTREAM_TIMEOUT_MS, HAILO_DEFAULT_VSTREAM_QUEUE_SIZE);
+        1000, HAILO_DEFAULT_VSTREAM_QUEUE_SIZE);
 
     if (!in_params || !out_params) return make_unexpected(HAILO_INTERNAL_FAILURE);
 
@@ -134,17 +132,42 @@ int main(int argc, char** argv)
         return 1;
     }
     const std::string hef_path = argv[1];
+    std::signal(SIGTERM, stop_handler);
+    std::signal(SIGINT, stop_handler);
+    const char* count_env = std::getenv("NPU_COUNT");
+    char* end = nullptr;
+    const long requested = count_env ? std::strtol(count_env, &end, 10) : 1;
+    if (requested < 1 || requested > 8 || (count_env && (*count_env == '\0' || *end != '\0'))) {
+        std::cerr << "NPU_COUNT must be an integer from 1 to 8\n";
+        return 1;
+    }
+    auto discovered = Device::scan();
+    if (!discovered || discovered->size() != static_cast<size_t>(requested)) {
+        std::cerr << "Expected exactly " << requested << " accessible NPUs; check CDI isolation\n";
+        return 1;
+    }
+    const uint32_t device_count = static_cast<uint32_t>(requested);
+    std::vector<InferInstance> instances;
+    for (const auto& id : discovered.value()) {
+        auto inst = create_infer_instance(hef_path, id);
+        if (!inst) {
+            std::cerr << "Cannot initialize assigned NPU " << id << " status=" << inst.status() << "\n";
+            return 1;
+        }
+        std::cout << "[infer] assigned device=" << id << "\n";
+        instances.push_back(std::move(inst.value()));
+    }
 
     // UDS
     comm::UdsDgram sock(comm::SOCK_INFER_PATH);
     sock.set_nonblocking(true);
 
     // SHM: inference consumes RGB, produces DET
-    comm::ShmRingConsumer shm_rgb(comm::SHM_RGB_NAME);
 
     const uint32_t det_slot_bytes =
         (uint32_t)comm::align64(sizeof(comm::DetSlotHeader) + sizeof(comm::Detection) * comm::MAX_DETS);
     comm::ShmRingProducer shm_det({comm::SHM_DET_NAME, comm::TOTAL_SLOTS, det_slot_bytes});
+    comm::ShmRingConsumer shm_rgb(comm::SHM_RGB_NAME, 5000);
 
     if (shm_rgb.slots() != comm::TOTAL_SLOTS) {
         std::cerr << "[infer] shm_rgb slots mismatch. expected=" << comm::TOTAL_SLOTS
@@ -155,6 +178,7 @@ int main(int argc, char** argv)
     // Queues
     CamQueue queues[comm::CAM_COUNT];
     std::atomic<bool> running{true};
+    std::atomic<bool> failed{false};
 
     // Receiver thread: demux by cam_id
     std::thread rx_thread([&]() {
@@ -180,38 +204,39 @@ int main(int argc, char** argv)
                     queues[m.cam_id].q.pop_front();
                 }
             }
-            queues[m.cam_id].cv.notify_one();
+
         }
     });
 
-    // Create 8 worker inference instances
-    // Using device_count=1 allocates 1 NPU for each camera input.
-    // Each worker has its own VDevice / network group to avoid serialization.
+    // Each NPU owns a disjoint set of cameras, regardless of input count.
     std::vector<std::thread> workers;
-    workers.reserve(comm::CAM_COUNT);
-
-    for (uint32_t cam_id = 0; cam_id < comm::CAM_COUNT; ++cam_id) {
-        workers.emplace_back([&, cam_id]() {
-            auto inst_exp = create_infer_instance(hef_path, 1);
-            if (!inst_exp) {
-                std::cerr << "[infer] failed to create infer instance cam=" << cam_id
-                          << " status=" << inst_exp.status() << "\n";
-                return;
-            }
-            auto inst = std::move(inst_exp.value());
-
+    workers.reserve(device_count);
+    for (uint32_t worker_id = 0; worker_id < device_count; ++worker_id) {
+        workers.emplace_back([&, worker_id]() {
+            auto& inst = instances[worker_id];
+            uint32_t next_cam = worker_id;
             const size_t expected_rgb = comm::IMG_W * comm::IMG_H * comm::IMG_CH;
 
             while (running.load(std::memory_order_relaxed)) {
                 WorkItem item{};
-                {
-                    std::unique_lock<std::mutex> lk(queues[cam_id].m);
-                    queues[cam_id].cv.wait(lk, [&] {
-                        return !queues[cam_id].q.empty() || !running.load(std::memory_order_relaxed);
-                    });
-                    if (!running.load(std::memory_order_relaxed)) break;
-                    item = queues[cam_id].q.back();
-                    queues[cam_id].q.clear(); // take latest only
+                bool found = false;
+                uint32_t cam_id = next_cam;
+                // Round-robin over this worker's cameras, keeping only the latest frame.
+                for (uint32_t tries = 0; tries < comm::CAM_COUNT; ++tries) {
+                    cam_id = next_cam;
+                    next_cam += device_count;
+                    if (next_cam >= comm::CAM_COUNT) next_cam = worker_id;
+                    std::lock_guard<std::mutex> lk(queues[cam_id].m);
+                    if (!queues[cam_id].q.empty()) {
+                        item = queues[cam_id].q.back();
+                        queues[cam_id].q.clear();
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    continue;
                 }
 
                 const auto& fm = item.msg;
@@ -244,7 +269,9 @@ int main(int argc, char** argv)
                 auto status = inst.infer_vstreams->infer(inst.in_views, inst.out_views, 1);
                 if (HAILO_SUCCESS != status) {
                     std::cerr << "[infer] infer failed cam=" << cam_id << " status=" << status << "\n";
-                    continue;
+                    failed.store(true);
+                    running.store(false);
+                    break;
                 }
                 auto end_infer_ns = now_steady_ns();
 
@@ -298,13 +325,13 @@ int main(int argc, char** argv)
         });
     }
 
-    std::cout << "[infer] running 8 workers for 8 cameras.\n";
-
-    // Wait forever (or add signal handling if you want)
+    std::cout << "[infer] running " << device_count << " workers for " << comm::CAM_COUNT << " cameras.\n";
+    while (!stop_requested && running.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    running.store(false);
     for (auto& t : workers) t.join();
-
-    running.store(false, std::memory_order_relaxed);
     rx_thread.join();
-
-    return 0;
+    // Destruction releases streams, configured networks, and devices before exit.
+    return failed.load() ? 1 : 0;
 }

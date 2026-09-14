@@ -1,0 +1,265 @@
+diff --git a/pkg/cdi/atomic_test.go b/pkg/cdi/atomic_test.go
+new file mode 100644
+index 0000000..709c433
+--- /dev/null
++++ b/pkg/cdi/atomic_test.go
+@@ -0,0 +1,56 @@
++package cdi
++
++import (
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"sync"
++	"testing"
++)
++
++func TestAtomicPublication(t *testing.T) {
++	dir := t.TempDir()
++	file := filepath.Join(dir, "hailo.json")
++	data := []byte(`{"devices":[{"name":"hailo0"}]}`)
++	if err := atomicWrite(file, data); err != nil {
++		t.Fatal(err)
++	}
++	var wg sync.WaitGroup
++	wg.Add(1)
++	go func() {
++		defer wg.Done()
++		for i := 0; i < 100; i++ {
++			if err := atomicWrite(file, data); err != nil {
++				t.Error(err)
++				return
++			}
++		}
++	}()
++	for i := 0; i < 1000; i++ {
++		b, err := os.ReadFile(file)
++		if err != nil || !json.Valid(b) {
++			t.Errorf("partial CDI: %s %v", b, err)
++			break
++		}
++	}
++	wg.Wait()
++}
++
++func TestPrivateSysfsAndNoSharedCleanup(t *testing.T) {
++	dir := t.TempDir()
++	if err := GenerateCDI(nil, dir); err != nil {
++		t.Fatal(err)
++	}
++	data, err := os.ReadFile(filepath.Join(dir, "hailo.json"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	var spec CDISpec
++	if err = json.Unmarshal(data, &spec); err != nil {
++		t.Fatal(err)
++	}
++	edits := spec.ContainerEdits
++	if len(edits.Hooks) != 0 || len(edits.Mounts) != 1 || edits.Mounts[0].Type != "tmpfs" {
++		t.Fatal("sysfs must be private without shared cleanup")
++	}
++}
+diff --git a/pkg/cdi/cdi.go b/pkg/cdi/cdi.go
+index 2351939..903b51c 100644
+--- a/pkg/cdi/cdi.go
++++ b/pkg/cdi/cdi.go
+@@ -43,6 +43,7 @@ type DeviceNode struct {
+ 
+ // Mount for CDI
+ type Mount struct {
++	Type          string   `json:"type,omitempty"`
+ 	HostPath      string   `json:"hostPath"`
+ 	ContainerPath string   `json:"containerPath"`
+ 	Options       []string `json:"options,omitempty"`
+@@ -57,7 +58,6 @@ type Hook struct {
+ 	Timeout  int      `json:"timeout,omitempty"`
+ }
+ 
+-
+ // resolveSysfsPath verifies that the device path exists
+ func resolveSysfsPath(deviceID string) error {
+ 	symlinkPath := filepath.Join("/sys/class/hailo_chardev", deviceID)
+@@ -106,25 +106,12 @@ func GenerateCDI(devices []string, outputDir string) error {
+ 			"multi-device": "true",
+ 		},
+ 		Devices: []*DeviceSpec{},
+-		// Global container edits applied to all devices
++		// The runtime creates a private tmpfs for each container. A shared host
++		// directory accumulates other containers' mountpoints and its cleanup
++		// hook can remove entries from still-running containers.
+ 		ContainerEdits: &ContainerEdits{
+-			Mounts: []*Mount{
+-				{
+-					// Mount empty directory to /sys/class/hailo_chardev with rw
+-					// This hides all devices initially and allows mounting devices inside
+-					HostPath:      "/var/lib/hailo-cdi/empty-chardev",
+-					ContainerPath: "/sys/class/hailo_chardev",
+-					Options:       []string{"rw", "bind"},
+-				},
+-			},
+-			Hooks: []*Hook{
+-				{
+-					HookName: "poststop",
+-					Path:     "/var/lib/hailo-cdi/cleanup-empty-chardev.sh",
+-					Args:     []string{},
+-					Timeout:  5,
+-				},
+-			},
++			Mounts: []*Mount{{HostPath: "tmpfs", ContainerPath: "/sys/class/hailo_chardev",
++				Type: "tmpfs", Options: []string{"rw", "nosuid", "nodev", "noexec", "mode=0755", "size=1m"}}},
+ 		},
+ 	}
+ 
+@@ -133,9 +120,7 @@ func GenerateCDI(devices []string, outputDir string) error {
+ 		// Create device-specific sysfs mounts to isolate this device
+ 		sysfsMounts, err := createDeviceSpecificSysfsMounts(dev)
+ 		if err != nil {
+-			// Log warning but continue - device will still work without sysfs isolation
+-			fmt.Fprintf(os.Stderr, "Warning: failed to create sysfs mounts for %s: %v\n", dev, err)
+-			sysfsMounts = []*Mount{}
++			return fmt.Errorf("cannot isolate device %s: %w", dev, err)
+ 		}
+ 
+ 		spec.Devices = append(spec.Devices, &DeviceSpec{
+@@ -165,7 +150,7 @@ func GenerateCDI(devices []string, outputDir string) error {
+ 	}
+ 
+ 	cdiFile := filepath.Join(outputDir, "hailo.json")
+-	return os.WriteFile(cdiFile, data, 0644)
++	return atomicWrite(cdiFile, data)
+ }
+ 
+ // ReadDevices reads the CDI spec and returns the list of device IDs
+@@ -187,3 +172,26 @@ func ReadDevices(cdiDir string) ([]string, error) {
+ 	}
+ 	return devices, nil
+ }
++
++// Publish a complete CDI snapshot in a single rename. Readers never see partial JSON.
++func atomicWrite(name string, data []byte) error {
++	f, err := os.CreateTemp(filepath.Dir(name), ".hailo-*.tmp")
++	if err != nil {
++		return err
++	}
++	defer os.Remove(f.Name())
++	defer f.Close()
++	if err = f.Chmod(0644); err != nil {
++		return err
++	}
++	if _, err = f.Write(data); err != nil {
++		return err
++	}
++	if err = f.Sync(); err != nil {
++		return err
++	}
++	if err = f.Close(); err != nil {
++		return err
++	}
++	return os.Rename(f.Name(), name)
++}
+diff --git a/pkg/monitor/monitor.go b/pkg/monitor/monitor.go
+index 7dfc0a4..43168ec 100644
+--- a/pkg/monitor/monitor.go
++++ b/pkg/monitor/monitor.go
+@@ -61,5 +61,5 @@ func (m *ResourceMonitor) discoverDevices() []string {
+ 		log.Printf("Failed to list devices: %v", err)
+ 		return nil
+ 	}
+-	return strings.Split(strings.TrimSpace(string(output)), "\n")
++	return strings.Fields(string(output))
+ }
+diff --git a/pkg/plugin/allocation_validation_test.go b/pkg/plugin/allocation_validation_test.go
+new file mode 100644
+index 0000000..7557e93
+--- /dev/null
++++ b/pkg/plugin/allocation_validation_test.go
+@@ -0,0 +1,28 @@
++package plugin
++
++import (
++	"context"
++	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func TestAllocationValidation(t *testing.T) {
++	dir := t.TempDir()
++	if err := os.WriteFile(filepath.Join(dir, "hailo.json"), []byte(`{"devices":[{"name":"hailo0"}]}`), 0644); err != nil {
++		t.Fatal(err)
++	}
++	p := &HailoDevicePlugin{CdiDir: dir}
++	for _, ids := range [][]string{{"missing"}, {"hailo0", "hailo0"}, {}} {
++		if _, err := p.Allocate(context.Background(), &pluginapi.AllocateRequest{ContainerRequests: []*pluginapi.ContainerAllocateRequest{{DevicesIDs: ids}}}); err == nil {
++			t.Fatalf("accepted %v", ids)
++		}
++	}
++	req := &pluginapi.AllocateRequest{ContainerRequests: []*pluginapi.ContainerAllocateRequest{{DevicesIDs: []string{"hailo0"}}}}
++	for i := 0; i < 2; i++ {
++		if _, err := p.Allocate(context.Background(), req); err != nil {
++			t.Fatalf("idempotent allocation: %v", err)
++		}
++	}
++}
+diff --git a/pkg/plugin/plugin.go b/pkg/plugin/plugin.go
+index ecfab1c..1c7b2f1 100644
+--- a/pkg/plugin/plugin.go
++++ b/pkg/plugin/plugin.go
+@@ -9,6 +9,8 @@ import (
+ 
+ 	"hailo-device-plugin/pkg/cdi"
+ 
++	"google.golang.org/grpc/codes"
++	"google.golang.org/grpc/status"
+ 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
+ )
+ 
+@@ -88,6 +90,29 @@ func (p *HailoDevicePlugin) sendDeviceList(server pluginapi.DevicePlugin_ListAnd
+ func (p *HailoDevicePlugin) Allocate(ctx context.Context, req *pluginapi.AllocateRequest) (*pluginapi.AllocateResponse, error) {
+ 	log.Printf("Allocate called with request: %v", req)
+ 
++	if req == nil {
++		return nil, status.Error(codes.InvalidArgument, "nil allocation request")
++	}
++	ids, err := cdi.ReadDevices(p.CdiDir)
++	if err != nil {
++		return nil, status.Errorf(codes.Unavailable, "read device inventory: %v", err)
++	}
++	available := make(map[string]bool, len(ids))
++	for _, id := range ids {
++		available[id] = true
++	}
++	seen := make(map[string]bool)
++	for _, container := range req.ContainerRequests {
++		if container == nil || len(container.DevicesIDs) == 0 {
++			return nil, status.Error(codes.InvalidArgument, "empty container allocation")
++		}
++		for _, id := range container.DevicesIDs {
++			if !available[id] || seen[id] {
++				return nil, status.Errorf(codes.InvalidArgument, "unknown or duplicate device %q", id)
++			}
++			seen[id] = true
++		}
++	}
+ 	var response pluginapi.AllocateResponse
+ 
+ 	for _, containerReq := range req.ContainerRequests {
+diff --git a/tests/plugin_test.go b/tests/plugin_test.go
+index 2fce1ab..1864f73 100644
+--- a/tests/plugin_test.go
++++ b/tests/plugin_test.go
+@@ -30,10 +30,9 @@ func TestPluginWithExistingCDI(t *testing.T) {
+ 		t.Fatalf("Failed to copy CDI file: %v", err)
+ 	}
+ 
+-	// Create plugin with mock monitor
++	// Create plugin using the existing CDI inventory
+ 	p := &plugin.HailoDevicePlugin{
+-		Monitor: nil, // Not used in ListAndWatch
+-		CdiDir:  cdiDir,
++		CdiDir: cdiDir,
+ 	}
+ 
+ 	// Test ReadDevices

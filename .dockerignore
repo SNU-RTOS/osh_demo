@@ -1,0 +1,6 @@
+.git
+build
+**/.cache
+**/bin
+**/results
+*.log

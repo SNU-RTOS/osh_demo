@@ -3,6 +3,11 @@
 
 # Execution Guide
 
+For managed start/suspend/resume/resize and multi-model NPU tasks, see the
+[NPU task framework](npu-task/README.md). To reproduce the complete build,
+deployment, lifecycle, recovery, and cleanup procedure, use the
+[NPU reproduction runbook](npu-task/REPRODUCE.md). The guide below is the camera demo.
+
 This document describes the step-by-step procedure to build and run the OSH demo with K3s, Hailo NPU, and camera overlay.
 
 ---
@@ -99,13 +104,14 @@ For more details, refer to:
 
 ## 6. Run the Inference Driver Pod
 
-Start the inference driver pod and execute the inference binary.
+Start the camera and inference processes together (within five seconds). The pod
+runs inference directly; exiting the binary terminates the pod and releases NPUs.
+Rebuild both binaries: the shared-memory protocol is now version 2 and supports
+all 24 frame slots.
 
 ```bash
 kubectl apply -f inference_driver.yaml
-kubectl exec -it inference-driver -- /bin/bash
-cd build/inference
-./inference_driver ../../yolov10s.hef
+kubectl logs -f inference-driver
 ```
 
 ---
@@ -121,7 +127,7 @@ Run the camera overlay binary on a system with a display connected to the board.
 
 ```bash
 cd build/camera
-./camera_overlay # It will use total 8 cameras from /dev/video100 to /dev/video107
+OSH_TASK_ID=demo ./camera_overlay # It will use total 8 cameras from /dev/video100 to /dev/video107
 ```
 
 ---
@@ -140,6 +146,8 @@ cd build/inference
 ---
 
 ## Error Handling
-If you encounter an error related to shared memory, run the commands in steps 6 and 7, then rerun step 6.
+Both applications must use the same `OSH_TASK_ID`, be rebuilt together, and start
+within five seconds of each other. A stale version-1 shared-memory ring is rejected;
+the rebuilt producer initializes a version-2 ring.
 
 ---

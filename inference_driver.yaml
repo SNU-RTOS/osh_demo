@@ -26,8 +26,8 @@ spec:
   - name: demo
     image: ghcr.io/snu-rtos/osh-compile:latest
     imagePullPolicy: Always
-    command: ["sleep"]
-    args: ["infinity"]
+    command: ["/work/build/inference/inference_driver"]
+    args: ["/work/yolov10s.hef"]
 
     securityContext:
       runAsUser: 0
@@ -47,6 +47,10 @@ spec:
         hailo.ai/npu: 8
 
     env:
+    - name: NPU_COUNT
+      value: "8"
+    - name: OSH_TASK_ID
+      value: demo
     - name: NODE_NAME
       valueFrom:
         fieldRef:

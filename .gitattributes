@@ -1,0 +1,2 @@
+# Embedded patch files contain source indentation as literal patch data.
+npu-task/plugin/*.patch -whitespace
