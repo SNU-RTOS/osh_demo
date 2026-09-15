@@ -67,3 +67,10 @@ curl http://127.0.0.1:9788/metrics
 The board must provide a HailoRT CLI and its matching runtime libraries. The
 exporter only exposes measurements; it does not make fractional scheduling
 decisions or revoke a device from a running pod.
+
+The advisory selection policy in `npu-task/policy` is the next integration
+point. It only considers fresh, unallocated devices below a configured
+threshold and returns a recommendation. The Kubernetes scheduler/device
+plugin still performs the authoritative allocation, so the recommendation can
+race with another task and must be treated as a hint until a scheduler
+extender or dispatcher consumes it.
