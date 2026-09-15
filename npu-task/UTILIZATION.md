@@ -50,3 +50,20 @@ the model table should include `FPS`. If no files are reported, check that
 the application and monitor use the same HailoRT monitor directory and that
 the HailoRT service configuration is consistent with the process.
 
+## Exporter prototype
+
+The repository includes a parser and HTTP exporter. Build it with the same Go
+container used for the controller:
+
+```sh
+docker run --rm -v "$PWD/npu-task:/src" -w /src golang:1.24 \
+  go build -trimpath -o /src/bin/hailo-monitor-exporter \
+  ./cmd/hailo-monitor-exporter
+sudo npu-task/bin/hailo-monitor-exporter \
+  -hailortcli /usr/bin/hailortcli -listen :9788
+curl http://127.0.0.1:9788/metrics
+```
+
+The board must provide a HailoRT CLI and its matching runtime libraries. The
+exporter only exposes measurements; it does not make fractional scheduling
+decisions or revoke a device from a running pod.

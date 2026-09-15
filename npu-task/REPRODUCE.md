@@ -353,6 +353,19 @@ export HAILO_MONITOR=1
 hailortcli monitor
 ```
 
+The first collector prototype parses this output and serves Prometheus text
+metrics. Build and run it on the board (where `hailortcli` and its libraries
+are installed):
+
+```sh
+docker run --rm -v "$PWD/npu-task:/src" -w /src golang:1.24 \
+  go build -trimpath -o /src/bin/hailo-monitor-exporter \
+  ./cmd/hailo-monitor-exporter
+sudo npu-task/bin/hailo-monitor-exporter \
+  -hailortcli /usr/bin/hailortcli -listen :9788
+curl http://127.0.0.1:9788/metrics
+```
+
 Use [`UTILIZATION.md`](UTILIZATION.md) for the progression from telemetry to
 exclusive-allocation admission and, later, a dispatcher for true sharing. The
 monitor check is board-side because the present probe image does not package
