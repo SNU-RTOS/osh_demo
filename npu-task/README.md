@@ -9,6 +9,12 @@ command, compiled model, and an exclusive allocation of 1–8 NPUs. Start, stop,
 resume, and resize are ordinary Kubernetes object updates. The controller replaces
 pods when execution settings change and never overlaps old and new generations.
 
+For the utilization-aware allocation milestone, see
+[`UTILIZATION.md`](UTILIZATION.md). HailoRT can report device/model utilization
+and FPS, but these measurements are first used for observability and admission.
+Safe fractional sharing requires a dispatcher that owns physical devices and
+schedules inference requests.
+
 ## Install
 
 The tested cluster uses K3s v1.33.6+k3s1 and containerd 2.1.5 on ARM64. Install the

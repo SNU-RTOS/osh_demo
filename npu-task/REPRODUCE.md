@@ -337,7 +337,28 @@ composition itself occurs in GL.
 The camera demo is model-specific and is separate from the generic `NPUTask`
 contract. It requires the existing IPC, `/tmp`, host camera, and display setup.
 
-## 13. Cleanup and rollback
+## 13. Utilization-aware allocation milestone
+
+The current device-plugin contract allocates whole `hailo.ai/npu` devices.
+There is no separate application-level deallocation call: deleting,
+suspending, or replacing the task pod causes kubelet to release the devices.
+Do not infer that a device is free from a low instantaneous utilization value.
+
+HailoRT for Hailo-8 provides a monitor that reports device/model utilization
+and FPS. On the board, run the workload with monitoring enabled and run the
+CLI in a second shell:
+
+```sh
+export HAILO_MONITOR=1
+hailortcli monitor
+```
+
+Use [`UTILIZATION.md`](UTILIZATION.md) for the progression from telemetry to
+exclusive-allocation admission and, later, a dispatcher for true sharing. The
+monitor check is board-side because the present probe image does not package
+the HailoRT CLI.
+
+## 14. Cleanup and rollback
 
 Remove test resources before uninstalling the controller:
 
@@ -363,12 +384,8 @@ hardware has been released. A stuck pod needs node/kubelet investigation.
 
 ## What to do next
 
-GPU rendering and composition is now an independent milestone. First prove the
-camera-free OpenGL probe on the target image, then run the camera overlay with
-`OSH_DISPLAY_BACKEND=opengl` and compare CPU/GPU composition latency. After that
-passes repeatedly, the next milestone is a model catalog and
-profiling layer. Record model image, HEF, NPU count, throughput, latency, memory,
-startup time, and device assignment for each workload. Use those measurements to
-define admission and priority policy before attempting automatic eviction or
-live reassignment. The current framework deliberately uses explicit
-user-controlled suspend and pod replacement.
+GPU rendering and composition is now an independent milestone. The next NPU
+milestone is to collect HailoRT monitor data for each task, then add
+utilization-aware admission and rightsizing while retaining exclusive device
+ownership. Only after that data is stable should we build the dispatcher needed
+for fractional sharing and cooperative preemption.
