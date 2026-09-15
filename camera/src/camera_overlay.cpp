@@ -12,6 +12,7 @@
 #include <thread>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
 
 #include "shm_ring.hpp"
 #include "ipc_protocol.hpp"
@@ -92,8 +93,11 @@ static GstElement* build_capture_pipeline(const std::string& dev, const std::str
 static GstElement* build_display_pipeline(GstElement** out_appsrc_elems, GstAppSrc** out_appsrcs) {
     // 2 rows x 4 cols, each tile 640x640 => 2560x1280
     // appsrc src0..src7 -> compositor comp -> autovideosink
+    const char* backend_env = std::getenv("OSH_DISPLAY_BACKEND");
+    const bool use_opengl = backend_env && std::string(backend_env) == "opengl";
     std::string desc;
-    desc += "compositor name=comp "
+    desc += use_opengl ? "glvideomixer name=comp " : "compositor name=comp ";
+    desc +=
             "sink_0::xpos=0    sink_0::ypos=0 "
             "sink_1::xpos=640  sink_1::ypos=0 "
             "sink_2::xpos=1280 sink_2::ypos=0 "
@@ -107,7 +111,8 @@ static GstElement* build_display_pipeline(GstElement** out_appsrc_elems, GstAppS
     for (int i = 0; i < 8; ++i) {
         desc += "appsrc name=src" + std::to_string(i) + " is-live=true do-timestamp=true format=time ";
         desc += "! video/x-raw,format=RGB,width=640,height=640,framerate=30/1 ";
-        desc += "! videoconvert ";
+        if (use_opengl) desc += "! glupload ! glcolorconvert ";
+        else desc += "! videoconvert ";
         desc += "! comp. ";
     }
 

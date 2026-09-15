@@ -65,7 +65,8 @@ docker run --rm \
 ```
 
 The expected result is a passing controller test suite and the `shm_ring` CTest.
-The C++ build produces `camera_overlay`, `inference_driver`, and `npu_probe`.
+The C++ build produces `camera_overlay`, `gpu_compositor_probe`,
+`inference_driver`, and `npu_probe`.
 
 ## 3. Build and load the controller
 
@@ -273,7 +274,35 @@ The output lists each pod/container and the exact `hailo.ai/npu` device IDs
 assigned by kubelet. If Go is already installed, `cd npu-task && go build -o
 bin/podresources ./cmd/podresources` is equivalent.
 
-## 11. Optional camera demo
+## 11. Milestone: GPU rendering and composition
+
+The GPU path is implemented with GStreamer's OpenGL elements. It uploads each
+tile to GL, composes the eight tiles with `glvideomixer`, and sends the result to
+`glimagesink`. Vulkan is not the first backend here because the available
+GStreamer Vulkan plugin provides upload/sink elements but no compositor; a
+custom Vulkan renderer can be evaluated after this milestone.
+
+Build and run the camera-free compositor probe:
+
+```sh
+docker build -f npu-task/tests/Dockerfile.probe -t npu-task-probe:local .
+docker save npu-task-probe:local | k3s ctr images import -
+docker run --rm --device=/dev/dri \
+  -e DISPLAY -e WAYLAND_DISPLAY -e XDG_RUNTIME_DIR \
+  -v "${XDG_RUNTIME_DIR:-/tmp}:/tmp/runtime" \
+  npu-task-probe:local /app/gpu_compositor_probe --sink glimagesink --frames 120
+```
+
+Run this on the target board or in the final display-capable image. Success is
+reported as `GPU_RENDER_OK backend=OpenGL`. `--sink fakesink` is useful for
+headless pipeline testing but still needs EGL because GL composition happens
+before the sink. If it fails with `EGL_NOT_INITIALIZED`, `Could not create
+window`, or missing `glvideomixer`, install `gstreamer1.0-gl` and expose the
+board's EGL/DRM/Wayland/X11 device to the container. The current shell has no
+usable GPU device node, so it can compile this binary but cannot certify GPU
+execution here.
+
+## 12. Optional camera demo
 
 Rebuild both binaries because the shared-memory protocol is version 2 and now
 supports all 24 camera slots:
@@ -292,10 +321,23 @@ Run the host camera process with the same task ID:
 OSH_TASK_ID=demo ./build/camera/camera_overlay
 ```
 
+Select the GPU compositor in the same binary with:
+
+```sh
+OSH_TASK_ID=demo OSH_DISPLAY_BACKEND=opengl ./build/camera/camera_overlay
+```
+
+This uses GStreamer's `glvideomixer`, `glupload`, and `glcolorconvert`. The
+default remains the CPU `compositor`. The runtime image must include
+`gstreamer1.0-gl`, and the node must expose a working EGL/GL display device.
+The camera-free `gpu_compositor_probe --sink glimagesink` exercises the same
+composition path; `--sink fakesink` still requires an EGL context because the
+composition itself occurs in GL.
+
 The camera demo is model-specific and is separate from the generic `NPUTask`
 contract. It requires the existing IPC, `/tmp`, host camera, and display setup.
 
-## 12. Cleanup and rollback
+## 13. Cleanup and rollback
 
 Remove test resources before uninstalling the controller:
 
@@ -321,7 +363,10 @@ hardware has been released. A stuck pod needs node/kubelet investigation.
 
 ## What to do next
 
-After this runbook passes repeatedly, the next milestone is a model catalog and
+GPU rendering and composition is now an independent milestone. First prove the
+camera-free OpenGL probe on the target image, then run the camera overlay with
+`OSH_DISPLAY_BACKEND=opengl` and compare CPU/GPU composition latency. After that
+passes repeatedly, the next milestone is a model catalog and
 profiling layer. Record model image, HEF, NPU count, throughput, latency, memory,
 startup time, and device assignment for each workload. Use those measurements to
 define admission and priority policy before attempting automatic eviction or

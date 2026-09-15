@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates openssl \
     git build-essential pkg-config cmake libopencv-dev libjsoncpp-dev wget \
     gstreamer1.0-tools \
+    gstreamer1.0-gl \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     && update-ca-certificates \
@@ -38,6 +39,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fastddsgen default-jre \
     gstreamer1.0-tools \
     gstreamer1.0-plugins-base \
+    gstreamer1.0-gl \
     gstreamer1.0-plugins-good \
     gstreamer1.0-plugins-bad \
     gstreamer1.0-libav \

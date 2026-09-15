@@ -158,6 +158,11 @@ The reference inference driver distributes the eight inputs over `NPU_COUNT`
 workers and selects one explicit device for each worker. Its YOLO decoder remains
 model-specific. Use the standalone probe when no camera input is available.
 
+GPU composition is available as a separate milestone. `camera_overlay` accepts
+`OSH_DISPLAY_BACKEND=opengl` to use GStreamer's `glvideomixer`; the default CPU
+compositor remains available for boards without a usable EGL/DRM/Wayland/X11
+graphics context. Run `gpu_compositor_probe` before connecting it to camera input.
+
 ## Remove
 
 Suspend or delete all NPUTasks and wait for their pods to terminate before
