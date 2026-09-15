@@ -6,6 +6,9 @@ spec:
   image: npu-task-probe:local
   command: [/app/npu_probe]
   args: [$(MODEL_PATH), '10']
+  env:
+    - name: HAILO_MONITOR
+      value: "1"
   model:
     path: /models/yolov10s.hef
   npuCount: 2

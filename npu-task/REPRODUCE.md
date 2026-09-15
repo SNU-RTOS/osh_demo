@@ -366,6 +366,28 @@ sudo npu-task/bin/hailo-monitor-exporter \
 curl http://127.0.0.1:9788/metrics
 ```
 
+For cluster deployment, build/import the exporter image and apply the DaemonSet:
+
+```sh
+docker build -f npu-task/Dockerfile.monitor-exporter \
+  -t npu-task-monitor-exporter:local npu-task
+docker save npu-task-monitor-exporter:local | k3s ctr images import -
+kubectl apply -f npu-task/deploy/monitor-exporter.yaml
+kubectl rollout status daemonset/hailo-monitor-exporter \
+  -n npu-task-system --timeout=120s
+```
+
+Enable monitoring for an NPUTask by adding this to its spec:
+
+```yaml
+env:
+  - name: HAILO_MONITOR
+    value: "1"
+```
+
+The exporter DaemonSet is intentionally telemetry-only. It does not revoke
+devices or change scheduler decisions.
+
 Use [`UTILIZATION.md`](UTILIZATION.md) for the progression from telemetry to
 exclusive-allocation admission and, later, a dispatcher for true sharing. The
 monitor check is board-side because the present probe image does not package

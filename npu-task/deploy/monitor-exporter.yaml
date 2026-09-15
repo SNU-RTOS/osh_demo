@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: hailo-monitor-exporter
+  namespace: npu-task-system
+spec:
+  selector:
+    matchLabels: {app: hailo-monitor-exporter}
+  template:
+    metadata:
+      labels: {app: hailo-monitor-exporter}
+    spec:
+      containers:
+        - name: exporter
+          image: npu-task-monitor-exporter:local
+          imagePullPolicy: IfNotPresent
+          args: ["-hailortcli", "/host/usr/bin/hailortcli", "-listen", ":9788"]
+          ports:
+            - name: metrics
+              containerPort: 9788
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - {name: host-usr, mountPath: /host/usr, readOnly: true}
+            - {name: host-hmon, mountPath: /tmp/hmon_files}
+            - {name: host-dev, mountPath: /dev}
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 200m, memory: 128Mi}
+      volumes:
+        - name: host-usr
+          hostPath: {path: /usr, type: Directory}
+        - name: host-hmon
+          hostPath: {path: /tmp/hmon_files, type: DirectoryOrCreate}
+        - name: host-dev
+          hostPath: {path: /dev, type: Directory}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hailo-monitor-exporter
+  namespace: npu-task-system
+spec:
+  selector: {app: hailo-monitor-exporter}
+  ports:
+    - name: metrics
+      port: 9788
+      targetPort: metrics

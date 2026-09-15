@@ -15,6 +15,12 @@ and FPS, but these measurements are first used for observability and admission.
 Safe fractional sharing requires a dispatcher that owns physical devices and
 schedules inference requests.
 
+Set `HAILO_MONITOR=1` in a task's `spec.env` to mount the node's monitor
+directory into its pod. The optional exporter DaemonSet in
+`deploy/monitor-exporter.yaml` reads that same directory and serves metrics on
+port 9788. Build its image with `Dockerfile.monitor-exporter`; the node must
+provide a matching `/usr/bin/hailortcli` and HailoRT libraries.
+
 ## Install
 
 The tested cluster uses K3s v1.33.6+k3s1 and containerd 2.1.5 on ARM64. Install the

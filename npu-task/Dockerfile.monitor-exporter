@@ -1,0 +1,11 @@
+FROM golang:1.24 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY monitor monitor
+COPY cmd/hailo-monitor-exporter cmd/hailo-monitor-exporter
+RUN CGO_ENABLED=0 go build -trimpath -o /exporter ./cmd/hailo-monitor-exporter
+
+FROM debian:bookworm-slim
+COPY --from=build /exporter /usr/local/bin/hailo-monitor-exporter
+ENTRYPOINT ["/usr/local/bin/hailo-monitor-exporter"]

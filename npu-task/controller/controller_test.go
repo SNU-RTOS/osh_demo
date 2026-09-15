@@ -76,6 +76,19 @@ func TestResizeWaitsForOldPod(t *testing.T) {
 	}
 }
 
+func TestMonitorEnvMountsNodeDirectory(t *testing.T) {
+	r, task := fixture(t)
+	task.Spec.Env = []corev1.EnvVar{{Name: "HAILO_MONITOR", Value: "1"}}
+	reconcile(t, r, task)
+	p := getPod(t, r, task)
+	if len(p.Spec.Volumes) != 1 || p.Spec.Volumes[0].HostPath == nil || p.Spec.Volumes[0].HostPath.Path != "/tmp/hmon_files" {
+		t.Fatalf("monitor volume missing: %#v", p.Spec.Volumes)
+	}
+	if len(p.Spec.Containers[0].VolumeMounts) != 1 || p.Spec.Containers[0].VolumeMounts[0].MountPath != "/tmp/hmon_files" {
+		t.Fatalf("monitor mount missing: %#v", p.Spec.Containers[0].VolumeMounts)
+	}
+}
+
 func TestSuspendResumeAndControllerRestart(t *testing.T) {
 	r, task := fixture(t)
 	reconcile(t, r, task)

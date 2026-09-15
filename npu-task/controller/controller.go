@@ -102,8 +102,17 @@ func desiredPod(t *api.NPUTask, scheme *runtime.Scheme) (*corev1.Pod, error) {
 		p.Spec.Volumes = []corev1.Volume{{Name: "model", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: t.Spec.Model.PVC, ReadOnly: true}}}}
 		p.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{{Name: "model", MountPath: t.Spec.Model.MountPath, ReadOnly: true}}
 	}
+	for _, e := range env {
+		if e.Name == "HAILO_MONITOR" && e.Value == "1" {
+			p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "hailo-monitor", VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: "/tmp/hmon_files", Type: hostPathTypePtr(corev1.HostPathDirectoryOrCreate)}}})
+			p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "hailo-monitor", MountPath: "/tmp/hmon_files"})
+			break
+		}
+	}
 	return p, ctrl.SetControllerReference(t, p, scheme)
 }
+
+func hostPathTypePtr(v corev1.HostPathType) *corev1.HostPathType { return &v }
 
 func (r *Reconciler) status(ctx context.Context, t *api.NPUTask, phase, reason, message string, p *corev1.Pod, hash string) error {
 	before := t.DeepCopy()
