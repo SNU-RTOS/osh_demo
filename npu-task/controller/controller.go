@@ -11,10 +11,12 @@ import (
 	"time"
 
 	api "github.com/SNU-RTOS/osh_demo/npu-task/api"
+	"github.com/SNU-RTOS/osh_demo/npu-task/resource"
+	"github.com/SNU-RTOS/osh_demo/npu-task/sharing"
 	corev1 "k8s.io/api/core/v1"
 	errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/api/resource"
+	kresource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,12 +28,19 @@ const hashKey = "npu.snu-rtos.io/execution-hash"
 
 type Reconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Registry sharing.Registry
 }
 
 func Validate(s api.NPUTaskSpec) error {
-	if s.NPUCount < 1 || s.NPUCount > 8 {
-		return fmt.Errorf("npuCount must be between 1 and 8")
+	if (s.NPUCount == 0) == (s.NPUShare == 0) {
+		return fmt.Errorf("exactly one of npuCount or npuShare is required")
+	}
+	if s.NPUCount < 0 || s.NPUCount > 8 {
+		return fmt.Errorf("npuCount must be between 1 and 8 when used")
+	}
+	if s.NPUShare < 0 || s.NPUShare > resource.DefaultCapacity {
+		return fmt.Errorf("npuShare must be between 1 and %d when used", resource.DefaultCapacity)
 	}
 	if s.Image == "" || len(s.Command) == 0 || s.Command[0] == "" {
 		return fmt.Errorf("image and command are required")
@@ -46,7 +55,7 @@ func Validate(s api.NPUTaskSpec) error {
 		return fmt.Errorf("PVC model.path must be inside an absolute, non-root model.mountPath")
 	}
 	for _, e := range s.Env {
-		if e.Name == "NPU_COUNT" || e.Name == "MODEL_PATH" {
+		if e.Name == "NPU_COUNT" || e.Name == "NPU_SHARE" || e.Name == "MODEL_PATH" || e.Name == "HAILORT_SERVICE_ADDRESS" || e.Name == "NPU_SCHEDULER_ADDRESS" || e.Name == "NPU_WORKLOAD_ID" {
 			return fmt.Errorf("%s is reserved", e.Name)
 		}
 	}
@@ -74,7 +83,7 @@ func executionHash(s api.NPUTaskSpec) string {
 
 func podName(t *api.NPUTask) string { return "nputask-" + string(t.UID) }
 
-func desiredPod(t *api.NPUTask, scheme *runtime.Scheme) (*corev1.Pod, error) {
+func desiredPod(t *api.NPUTask, scheme *runtime.Scheme, allocation *resource.Allocation, state *resource.NPUState) (*corev1.Pod, error) {
 	resources := *t.Spec.Resources.DeepCopy()
 	if resources.Requests == nil {
 		resources.Requests = corev1.ResourceList{}
@@ -82,16 +91,33 @@ func desiredPod(t *api.NPUTask, scheme *runtime.Scheme) (*corev1.Pod, error) {
 	if resources.Limits == nil {
 		resources.Limits = corev1.ResourceList{}
 	}
-	q := *resource.NewQuantity(int64(t.Spec.NPUCount), resource.DecimalSI)
-	resources.Requests[api.ResourceName] = q
-	resources.Limits[api.ResourceName] = q
 	env := append([]corev1.EnvVar(nil), t.Spec.Env...)
-	env = append(env, corev1.EnvVar{Name: "NPU_COUNT", Value: fmt.Sprint(t.Spec.NPUCount)}, corev1.EnvVar{Name: "MODEL_PATH", Value: t.Spec.Model.Path})
+	env = append(env, corev1.EnvVar{Name: "MODEL_PATH", Value: t.Spec.Model.Path})
+	annotations := map[string]string{hashKey: executionHash(t.Spec)}
+	if t.Spec.NPUShare == 0 {
+		q := *kresource.NewQuantity(int64(t.Spec.NPUCount), kresource.DecimalSI)
+		resources.Requests[api.ResourceName] = q
+		resources.Limits[api.ResourceName] = q
+		env = append(env, corev1.EnvVar{Name: "NPU_COUNT", Value: fmt.Sprint(t.Spec.NPUCount)})
+	} else {
+		if allocation == nil || state == nil {
+			return nil, fmt.Errorf("shared task requires an allocation")
+		}
+		annotations[sharing.AssignedNPUAnn] = allocation.NPUID
+		annotations[sharing.AllocatedShareAnn] = fmt.Sprint(allocation.Share)
+		annotations[sharing.WorkloadIDAnn] = allocation.WorkloadID
+		annotations[sharing.ModelKeyAnn] = allocation.ModelKey
+		env = append(env,
+			corev1.EnvVar{Name: "NPU_SHARE", Value: fmt.Sprint(allocation.Share)},
+			corev1.EnvVar{Name: "HAILORT_SERVICE_ADDRESS", Value: state.Endpoint},
+			corev1.EnvVar{Name: "NPU_SCHEDULER_ADDRESS", Value: state.SchedulerEndpoint},
+			corev1.EnvVar{Name: "NPU_WORKLOAD_ID", Value: allocation.WorkloadID})
+	}
 	grace := int64(30)
 	automount := false
 	p := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: podName(t), Namespace: t.Namespace,
 		Labels:      map[string]string{"npu.snu-rtos.io/task-uid": string(t.UID)},
-		Annotations: map[string]string{hashKey: executionHash(t.Spec)}},
+		Annotations: annotations},
 		Spec: corev1.PodSpec{RestartPolicy: corev1.RestartPolicyNever, TerminationGracePeriodSeconds: &grace, AutomountServiceAccountToken: &automount,
 			Containers: []corev1.Container{{Name: "inference", Image: t.Spec.Image, ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: append([]string(nil), t.Spec.Command...), Args: append([]string(nil), t.Spec.Args...), Env: env, Resources: resources}}}}
@@ -101,6 +127,15 @@ func desiredPod(t *api.NPUTask, scheme *runtime.Scheme) (*corev1.Pod, error) {
 	if t.Spec.Model.PVC != "" {
 		p.Spec.Volumes = []corev1.Volume{{Name: "model", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: t.Spec.Model.PVC, ReadOnly: true}}}}
 		p.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{{Name: "model", MountPath: t.Spec.Model.MountPath, ReadOnly: true}}
+	}
+	if t.Spec.NPUShare > 0 {
+		p.Spec.NodeName = state.NodeName
+		p.Spec.Volumes = append(p.Spec.Volumes,
+			corev1.Volume{Name: "dispatcher-uds", VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: "/var/lib/sano/share/uds", Type: hostPathTypePtr(corev1.HostPathDirectoryOrCreate)}}},
+			corev1.Volume{Name: "dispatcher-shm", VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: "/var/lib/sano/share/shm", Type: hostPathTypePtr(corev1.HostPathDirectoryOrCreate)}}})
+		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{Name: "dispatcher-uds", MountPath: "/tmp"},
+			corev1.VolumeMount{Name: "dispatcher-shm", MountPath: "/dev/shm"})
 	}
 	for _, e := range env {
 		if e.Name == "HAILO_MONITOR" && e.Value == "1" {
@@ -121,9 +156,21 @@ func (r *Reconciler) status(ctx context.Context, t *api.NPUTask, phase, reason, 
 	t.Status.ExecutionHash = hash
 	t.Status.PodName = ""
 	t.Status.NodeName = ""
+	t.Status.NPUID = ""
+	t.Status.DispatcherEndpoint = ""
+	t.Status.AllocatedShare = 0
 	if p != nil {
 		t.Status.PodName = p.Name
 		t.Status.NodeName = p.Spec.NodeName
+		if t.Spec.NPUShare > 0 {
+			t.Status.NPUID = p.Annotations[sharing.AssignedNPUAnn]
+			t.Status.AllocatedShare = t.Spec.NPUShare
+			for _, env := range p.Spec.Containers[0].Env {
+				if env.Name == "HAILORT_SERVICE_ADDRESS" {
+					t.Status.DispatcherEndpoint = env.Value
+				}
+			}
+		}
 	}
 	ready := metav1.ConditionFalse
 	if phase == "Running" {
@@ -178,7 +225,47 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if t.Spec.Mode != "Service" && t.Status.ExecutionHash == hash && terminal != nil && (terminal.Reason == "Completed" || terminal.Reason == "PodFailed") {
 			return ctrl.Result{}, nil
 		}
-		p, err = desiredPod(t, r.Scheme)
+		var allocation *resource.Allocation
+		var selected *resource.NPUState
+		if t.Spec.NPUShare > 0 {
+			if r.Registry == nil {
+				return ctrl.Result{RequeueAfter: time.Second}, r.status(ctx, t, "Pending", "NoDispatcherRegistry", "Shared allocation registry is not configured", nil, hash)
+			}
+			states, snapshotErr := r.Registry.Snapshot(ctx)
+			if snapshotErr != nil {
+				return ctrl.Result{}, snapshotErr
+			}
+			manager := resource.NewManager(resource.FirstFitPolicy{})
+			for _, state := range states {
+				base := state
+				base.Allocated, base.Workloads = 0, nil
+				if err := manager.RegisterNPU(base); err != nil {
+					return ctrl.Result{}, err
+				}
+				for _, workload := range state.Workloads {
+					if err := manager.RestoreAllocation(state.ID, workload); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			}
+			modelKey := t.Spec.Model.Key
+			if modelKey == "" {
+				modelKey = path.Base(t.Spec.Model.Path)
+			}
+			placed, allocateErr := manager.Allocate(resource.NPURequest{WorkloadID: string(t.UID), ModelKey: modelKey, Share: int(t.Spec.NPUShare)})
+			if allocateErr != nil {
+				return ctrl.Result{RequeueAfter: time.Second}, r.status(ctx, t, "Pending", "InsufficientNPUShare", allocateErr.Error(), nil, hash)
+			}
+			allocation = &placed
+			for _, state := range states {
+				if state.ID == placed.NPUID {
+					copy := state
+					selected = &copy
+					break
+				}
+			}
+		}
+		p, err = desiredPod(t, r.Scheme, allocation, selected)
 		if err != nil {
 			return ctrl.Result{}, err
 		}

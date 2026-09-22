@@ -21,6 +21,9 @@ spec:
     - name: NPUs
       type: integer
       jsonPath: .spec.npuCount
+    - name: Share
+      type: integer
+      jsonPath: .spec.npuShare
     - name: Mode
       type: string
       jsonPath: .spec.mode
@@ -45,7 +48,6 @@ spec:
             - image
             - command
             - model
-            - npuCount
             properties:
               image:
                 type: string
@@ -102,6 +104,8 @@ spec:
                   path:
                     type: string
                     pattern: ^/
+                  key:
+                    type: string
                   pvc: *id001
                   mountPath:
                     type: string
@@ -113,8 +117,12 @@ spec:
                   message: PVC models require mountPath and a model path inside it
               npuCount:
                 type: integer
-                minimum: 1
+                minimum: 0
                 maximum: 8
+              npuShare:
+                type: integer
+                minimum: 0
+                maximum: 1000
               suspend:
                 type: boolean
                 default: false
@@ -124,6 +132,9 @@ spec:
                 - Batch
                 - Service
                 default: Batch
+            x-kubernetes-validations:
+            - rule: '(has(self.npuCount) && self.npuCount > 0) != (has(self.npuShare) && self.npuShare > 0)'
+              message: Exactly one of npuCount or npuShare must be greater than zero
           status:
             type: object
             properties:
@@ -132,6 +143,10 @@ spec:
                 format: int64
               podName: *id001
               nodeName: *id001
+              npuID: *id001
+              dispatcherEndpoint: *id001
+              allocatedShare:
+                type: integer
               phase: *id001
               executionHash: *id001
               conditions:

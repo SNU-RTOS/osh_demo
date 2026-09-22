@@ -1,0 +1,6 @@
+FROM ubuntu:22.04
+RUN apt-get update && apt-get install -y --no-install-recommends libsystemd0 ca-certificates curl && rm -rf /var/lib/apt/lists/*
+COPY image/hailort_service /usr/local/bin/hailort_service
+COPY image/libhailort.so.4.21.0 /usr/local/lib/libhailort.so.4.21.0
+COPY image/npu-share-broker /usr/local/bin/npu-share-broker
+RUN ln -s libhailort.so.4.21.0 /usr/local/lib/libhailort.so.4 && ln -s libhailort.so.4.21.0 /usr/local/lib/libhailort.so && ldconfig

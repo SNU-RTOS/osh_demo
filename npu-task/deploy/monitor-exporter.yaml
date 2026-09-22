@@ -12,24 +12,21 @@ spec:
     spec:
       containers:
         - name: exporter
-          image: npu-task-monitor-exporter:local
-          imagePullPolicy: IfNotPresent
-          args: ["-hailortcli", "/host/usr/bin/hailortcli", "-listen", ":9788"]
+          image: hailo-monitor-exporter:share
+          imagePullPolicy: Never
+          args: ["-hailortcli", "/usr/local/bin/hailortcli", "-listen", ":9788"]
           ports:
             - name: metrics
               containerPort: 9788
           securityContext:
             privileged: true
           volumeMounts:
-            - {name: host-usr, mountPath: /host/usr, readOnly: true}
             - {name: host-hmon, mountPath: /tmp/hmon_files}
             - {name: host-dev, mountPath: /dev}
           resources:
             requests: {cpu: 10m, memory: 32Mi}
             limits: {cpu: 200m, memory: 128Mi}
       volumes:
-        - name: host-usr
-          hostPath: {path: /usr, type: Directory}
         - name: host-hmon
           hostPath: {path: /tmp/hmon_files, type: DirectoryOrCreate}
         - name: host-dev

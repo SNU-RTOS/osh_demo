@@ -13,6 +13,7 @@ const ResourceName corev1.ResourceName = "hailo.ai/npu"
 
 type Model struct {
 	Path      string `json:"path"`
+	Key       string `json:"key,omitempty"`
 	PVC       string `json:"pvc,omitempty"`
 	MountPath string `json:"mountPath,omitempty"`
 }
@@ -24,7 +25,8 @@ type NPUTaskSpec struct {
 	Env       []corev1.EnvVar             `json:"env,omitempty"`
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	Model     Model                       `json:"model"`
-	NPUCount  int32                       `json:"npuCount"`
+	NPUCount  int32                       `json:"npuCount,omitempty"`
+	NPUShare  int32                       `json:"npuShare,omitempty"`
 	Suspend   bool                        `json:"suspend,omitempty"`
 	Mode      string                      `json:"mode,omitempty"`
 }
@@ -33,6 +35,9 @@ type NPUTaskStatus struct {
 	ObservedGeneration int64  `json:"observedGeneration,omitempty"`
 	PodName            string `json:"podName,omitempty"`
 	NodeName           string `json:"nodeName,omitempty"`
+	NPUID              string `json:"npuID,omitempty"`
+	DispatcherEndpoint string `json:"dispatcherEndpoint,omitempty"`
+	AllocatedShare     int32  `json:"allocatedShare,omitempty"`
 	Phase              string `json:"phase,omitempty"`
 	// ExecutionHash makes terminal batch results durable across pod garbage collection.
 	ExecutionHash string             `json:"executionHash,omitempty"`

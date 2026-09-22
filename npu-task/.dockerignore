@@ -1,3 +1,4 @@
 .cache
+shared/.cache
 bin
 results

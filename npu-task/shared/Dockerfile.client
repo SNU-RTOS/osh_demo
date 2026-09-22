@@ -1,0 +1,7 @@
+FROM ubuntu:22.04
+RUN apt-get update && apt-get install -y --no-install-recommends libsystemd0 ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY image/shared_runner /usr/local/bin/shared_runner
+COPY image/libhailort.so.4.21.0 /usr/local/lib/libhailort.so.4.21.0
+COPY image/yolov10s.hef /opt/models/yolov10s.hef
+COPY image/tiny_yolov4.hef /opt/models/tiny_yolov4.hef
+RUN ln -s libhailort.so.4.21.0 /usr/local/lib/libhailort.so.4 && ln -s libhailort.so.4.21.0 /usr/local/lib/libhailort.so && ldconfig

@@ -4,6 +4,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY api api
 COPY controller controller
+COPY resource resource
+COPY sharing sharing
 COPY cmd cmd
 RUN CGO_ENABLED=0 go build -trimpath -o /controller ./cmd/controller
 FROM gcr.io/distroless/static:nonroot

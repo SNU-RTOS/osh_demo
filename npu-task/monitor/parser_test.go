@@ -7,6 +7,8 @@ func TestParseMonitorTables(t *testing.T) {
 0000:03:00.0                                               42.5                     HAILO8
 Model                                                        Utilization (%)         FPS            PID
 yolov10s                                                     37.5                     30.0           812
+Model                                                        Stream                    Direction      Frames Queue
+yolov10s                                                     yolov10s/input_layer1      H2D            0.50 1.00 0.00 4
 `
 	samples := Parse(input)
 	if len(samples) != 2 {

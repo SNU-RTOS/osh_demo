@@ -15,11 +15,22 @@ and FPS, but these measurements are first used for observability and admission.
 Safe fractional sharing requires a dispatcher that owns physical devices and
 schedules inference requests.
 
-Set `HAILO_MONITOR=1` in a task's `spec.env` to mount the node's monitor
-directory into its pod. The optional exporter DaemonSet in
-`deploy/monitor-exporter.yaml` reads that same directory and serves metrics on
-port 9788. Build its image with `Dockerfile.monitor-exporter`; the node must
-provide a matching `/usr/bin/hailortcli` and HailoRT libraries.
+The multi-NPU fractional-sharing architecture and completed milestones are
+documented in [`MULTI_NPU_MILESTONES.md`](MULTI_NPU_MILESTONES.md). The logical
+accounting and First Fit core live in `resource/`; the weighted runtime broker
+lives in `dispatcher/`. The existing exclusive `npuCount` API remains available.
+
+Shared tasks use `spec.npuShare` instead of `spec.npuCount`. The controller
+discovers ready dispatcher Pods, reconstructs their active allocations, applies
+First Fit, and injects `HAILORT_SERVICE_ADDRESS`. Use
+[`shared/README.md`](shared/README.md) is the clone-to-monitor runbook for the
+two-dispatcher, four-client hardware validation. It includes image construction,
+workload execution, live allocation/pending monitoring, evaluation, and cleanup.
+
+The exporter DaemonSet in `deploy/monitor-exporter.yaml` reads HailoRT monitor
+files and serves metrics on port 9788. Its image contains the pinned HailoRT
+4.21 CLI/library. `tools/npu_monitor.py` combines these observations with task,
+dispatcher, PodResources, allocation, grant, and Pending-condition state.
 
 ## Install
 

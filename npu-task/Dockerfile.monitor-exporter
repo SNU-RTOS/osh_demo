@@ -7,5 +7,10 @@ COPY cmd/hailo-monitor-exporter cmd/hailo-monitor-exporter
 RUN CGO_ENABLED=0 go build -trimpath -o /exporter ./cmd/hailo-monitor-exporter
 
 FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /exporter /usr/local/bin/hailo-monitor-exporter
+COPY shared/image/hailortcli /usr/local/bin/hailortcli
+COPY shared/image/libhailort.so.4.21.0 /usr/local/lib/libhailort.so.4.21.0
+RUN ln -s libhailort.so.4.21.0 /usr/local/lib/libhailort.so.4 && \
+    ln -s libhailort.so.4.21.0 /usr/local/lib/libhailort.so && ldconfig
 ENTRYPOINT ["/usr/local/bin/hailo-monitor-exporter"]

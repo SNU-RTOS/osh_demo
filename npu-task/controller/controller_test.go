@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	api "github.com/SNU-RTOS/osh_demo/npu-task/api"
+	"github.com/SNU-RTOS/osh_demo/npu-task/resource"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -12,6 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
+
+type staticRegistry struct{ states []resource.NPUState }
+
+func (s staticRegistry) Snapshot(context.Context) ([]resource.NPUState, error) { return s.states, nil }
 
 func fixture(t *testing.T) (*Reconciler, *api.NPUTask) {
 	t.Helper()
@@ -79,6 +84,7 @@ func TestResizeWaitsForOldPod(t *testing.T) {
 func TestMonitorEnvMountsNodeDirectory(t *testing.T) {
 	r, task := fixture(t)
 	task.Spec.Env = []corev1.EnvVar{{Name: "HAILO_MONITOR", Value: "1"}}
+	updateTask(t, r, task)
 	reconcile(t, r, task)
 	p := getPod(t, r, task)
 	if len(p.Spec.Volumes) != 1 || p.Spec.Volumes[0].HostPath == nil || p.Spec.Volumes[0].HostPath.Path != "/tmp/hmon_files" {
@@ -170,7 +176,7 @@ func TestContractAndValidation(t *testing.T) {
 	r, task := fixture(t)
 	task.Spec.Mode = "Service"
 	task.Spec.Model = api.Model{Path: "/models/a.hef", PVC: "models", MountPath: "/models"}
-	p, err := desiredPod(task, r.Scheme)
+	p, err := desiredPod(task, r.Scheme, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,5 +224,60 @@ func TestServiceTerminalPodIsReplaced(t *testing.T) {
 	p = getPod(t, r, task)
 	if p.Status.Phase == corev1.PodFailed {
 		t.Fatal("terminal service pod was not replaced")
+	}
+}
+
+func TestSharedTaskUsesFirstFitDispatcherWithoutPhysicalResource(t *testing.T) {
+	r, task := fixture(t)
+	task.Spec.NPUCount = 0
+	task.Spec.NPUShare = 300
+	task.Spec.Model.Key = "yolo"
+	r.Registry = staticRegistry{states: []resource.NPUState{
+		{ID: "npu-0", NodeName: "node-a", Endpoint: "unix:///tmp/npu-0.sock", SchedulerEndpoint: "unix:///tmp/npu-0-scheduler.sock", Health: resource.HealthHealthy, Capacity: 1000, Allocated: 800,
+			Workloads: []resource.WorkloadAllocation{{WorkloadID: "existing-a", Share: 800}}},
+		{ID: "npu-1", NodeName: "node-a", Endpoint: "unix:///tmp/npu-1.sock", SchedulerEndpoint: "unix:///tmp/npu-1-scheduler.sock", Health: resource.HealthHealthy, Capacity: 1000, Allocated: 400,
+			Workloads: []resource.WorkloadAllocation{{WorkloadID: "existing-b", Share: 400}}},
+	}}
+	updateTask(t, r, task)
+	reconcile(t, r, task)
+	p := getPod(t, r, task)
+	if p.Spec.NodeName != "node-a" || p.Annotations["npu.snu-rtos.io/assigned-npu"] != "npu-1" {
+		t.Fatalf("unexpected placement: node=%q annotations=%v", p.Spec.NodeName, p.Annotations)
+	}
+	if _, exists := p.Spec.Containers[0].Resources.Limits[api.ResourceName]; exists {
+		t.Fatal("shared client received a physical NPU resource")
+	}
+	foundEndpoint := false
+	foundScheduler := false
+	for _, env := range p.Spec.Containers[0].Env {
+		if env.Name == "HAILORT_SERVICE_ADDRESS" && env.Value == "unix:///tmp/npu-1.sock" {
+			foundEndpoint = true
+		}
+		if env.Name == "NPU_SCHEDULER_ADDRESS" && env.Value == "unix:///tmp/npu-1-scheduler.sock" {
+			foundScheduler = true
+		}
+	}
+	if !foundEndpoint || !foundScheduler {
+		t.Fatal("dispatcher endpoints were not injected")
+	}
+}
+
+func TestSharedTaskWaitsWhenLogicalCapacityIsFull(t *testing.T) {
+	r, task := fixture(t)
+	task.Spec.NPUCount = 0
+	task.Spec.NPUShare = 300
+	r.Registry = staticRegistry{states: []resource.NPUState{{ID: "npu-0", NodeName: "node-a", Endpoint: "unix:///tmp/npu-0.sock", SchedulerEndpoint: "unix:///tmp/npu-0-scheduler.sock", Health: resource.HealthHealthy, Capacity: 1000, Allocated: 800,
+		Workloads: []resource.WorkloadAllocation{{WorkloadID: "existing", Share: 800}}}}}
+	updateTask(t, r, task)
+	reconcile(t, r, task)
+	if task.Status.Phase != "Pending" || task.Status.Conditions[0].Reason != "InsufficientNPUShare" {
+		t.Fatalf("unexpected status: %#v", task.Status)
+	}
+	var pods corev1.PodList
+	if err := r.List(context.Background(), &pods); err != nil {
+		t.Fatal(err)
+	}
+	if len(pods.Items) != 0 {
+		t.Fatal("pod created without logical capacity")
 	}
 }

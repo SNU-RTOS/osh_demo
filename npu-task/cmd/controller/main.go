@@ -3,6 +3,7 @@ package main
 import (
 	api "github.com/SNU-RTOS/osh_demo/npu-task/api"
 	"github.com/SNU-RTOS/osh_demo/npu-task/controller"
+	"github.com/SNU-RTOS/osh_demo/npu-task/sharing"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"os"
@@ -21,7 +22,7 @@ func main() {
 		LeaderElectionID: "nputask.npu.snu-rtos.io", LeaderElectionNamespace: os.Getenv("POD_NAMESPACE"),
 		HealthProbeBindAddress: ":8081", Metrics: metrics.Options{BindAddress: ":8080"}})
 	must(err)
-	must((&controller.Reconciler{Client: m.GetClient(), Scheme: scheme}).SetupWithManager(m))
+	must((&controller.Reconciler{Client: m.GetClient(), Scheme: scheme, Registry: sharing.PodRegistry{Client: m.GetClient()}}).SetupWithManager(m))
 	must(m.AddHealthzCheck("healthz", healthz.Ping))
 	must(m.AddReadyzCheck("readyz", healthz.Ping))
 	must(m.Start(ctrl.SetupSignalHandler()))

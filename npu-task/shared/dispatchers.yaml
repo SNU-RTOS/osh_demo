@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: npu-share-dispatcher-0
+  namespace: npu-task-system
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: npu-share-dispatcher-0}
+  template:
+    metadata:
+      labels:
+        app: npu-share-dispatcher-0
+        npu.snu-rtos.io/component: dispatcher
+      annotations:
+        npu.snu-rtos.io/dispatcher-id: npu-0
+        npu.snu-rtos.io/dispatcher-endpoint: unix:///tmp/npu-share-0.sock
+        npu.snu-rtos.io/scheduler-endpoint: unix:///tmp/npu-share-0-scheduler.sock
+        npu.snu-rtos.io/capacity: "1000"
+    spec:
+      volumes:
+        - name: uds
+          hostPath: {path: /var/lib/sano/share/uds, type: DirectoryOrCreate}
+        - name: shm
+          hostPath: {path: /var/lib/sano/share/shm, type: DirectoryOrCreate}
+        - name: monitor
+          hostPath: {path: /tmp/hmon_files, type: DirectoryOrCreate}
+      initContainers:
+        - name: clean-socket
+          image: npu-share-dispatcher:local
+          imagePullPolicy: Never
+          command: [/bin/rm, -f, /tmp/npu-share-0.sock, /tmp/npu-share-0-scheduler.sock]
+          volumeMounts: [{name: uds, mountPath: /tmp}]
+      containers:
+        - name: share-scheduler
+          image: npu-share-dispatcher:local
+          imagePullPolicy: Never
+          command: [/usr/local/bin/npu-share-broker, -socket, /tmp/npu-share-0-scheduler.sock, -metrics, ":9790"]
+          ports: [{name: share-metrics, containerPort: 9790}]
+          volumeMounts: [{name: uds, mountPath: /tmp}]
+        - name: hailort-service
+          image: npu-share-dispatcher:local
+          imagePullPolicy: Never
+          command: [/usr/local/bin/hailort_service, standalone]
+          env:
+            - {name: HAILORT_SERVICE_ADDRESS, value: unix:///tmp/npu-share-0.sock}
+            - {name: HAILO_MONITOR, value: "1"}
+          resources:
+            requests: {hailo.ai/npu: 1, cpu: 500m}
+            limits: {hailo.ai/npu: 1}
+          volumeMounts: [{name: uds, mountPath: /tmp}, {name: shm, mountPath: /dev/shm}, {name: monitor, mountPath: /tmp/hmon_files}]
+          readinessProbe:
+            exec: {command: [/usr/bin/test, -S, /tmp/npu-share-0.sock]}
+            periodSeconds: 2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: npu-share-dispatcher-1
+  namespace: npu-task-system
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: npu-share-dispatcher-1}
+  template:
+    metadata:
+      labels:
+        app: npu-share-dispatcher-1
+        npu.snu-rtos.io/component: dispatcher
+      annotations:
+        npu.snu-rtos.io/dispatcher-id: npu-1
+        npu.snu-rtos.io/dispatcher-endpoint: unix:///tmp/npu-share-1.sock
+        npu.snu-rtos.io/scheduler-endpoint: unix:///tmp/npu-share-1-scheduler.sock
+        npu.snu-rtos.io/capacity: "1000"
+    spec:
+      volumes:
+        - name: uds
+          hostPath: {path: /var/lib/sano/share/uds, type: DirectoryOrCreate}
+        - name: shm
+          hostPath: {path: /var/lib/sano/share/shm, type: DirectoryOrCreate}
+        - name: monitor
+          hostPath: {path: /tmp/hmon_files, type: DirectoryOrCreate}
+      initContainers:
+        - name: clean-socket
+          image: npu-share-dispatcher:local
+          imagePullPolicy: Never
+          command: [/bin/rm, -f, /tmp/npu-share-1.sock, /tmp/npu-share-1-scheduler.sock]
+          volumeMounts: [{name: uds, mountPath: /tmp}]
+      containers:
+        - name: share-scheduler
+          image: npu-share-dispatcher:local
+          imagePullPolicy: Never
+          command: [/usr/local/bin/npu-share-broker, -socket, /tmp/npu-share-1-scheduler.sock, -metrics, ":9790"]
+          ports: [{name: share-metrics, containerPort: 9790}]
+          volumeMounts: [{name: uds, mountPath: /tmp}]
+        - name: hailort-service
+          image: npu-share-dispatcher:local
+          imagePullPolicy: Never
+          command: [/usr/local/bin/hailort_service, standalone]
+          env:
+            - {name: HAILORT_SERVICE_ADDRESS, value: unix:///tmp/npu-share-1.sock}
+            - {name: HAILO_MONITOR, value: "1"}
+          resources:
+            requests: {hailo.ai/npu: 1, cpu: 500m}
+            limits: {hailo.ai/npu: 1}
+          volumeMounts: [{name: uds, mountPath: /tmp}, {name: shm, mountPath: /dev/shm}, {name: monitor, mountPath: /tmp/hmon_files}]
+          readinessProbe:
+            exec: {command: [/usr/bin/test, -S, /tmp/npu-share-1.sock]}
+            periodSeconds: 2
