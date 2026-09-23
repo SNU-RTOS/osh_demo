@@ -62,7 +62,7 @@ func TestBrokerProtocolAndMetrics(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	broker.MetricsHandler(recorder, httptest.NewRequest("GET", "/metrics", nil))
 	body := recorder.Body.String()
-	for _, expected := range []string{`npu_share_active_workloads 1`, `npu_share_capacity 1000`, `npu_share_allocated_total 300`, `npu_share_available 700`, `npu_share_broker_info{epoch="`, `npu_share_allocated{workload="workload-a"} 300`, `npu_share_session_age_seconds{workload="workload-a"}`, `npu_share_grants_total{workload="workload-a"} 1`} {
+	for _, expected := range []string{`npu_share_active_workloads 1`, `npu_share_capacity 1000`, `npu_share_allocated_total 300`, `npu_share_available 700`, `npu_share_broker_info{epoch="`, `npu_share_allocated{workload="workload-a"} 300`, `npu_share_session_age_seconds{workload="workload-a"}`, `npu_share_grants_total{workload="workload-a"} 1`, `npu_share_grant_wait_seconds_count{workload="workload-a"} 1`, `npu_share_grant_wait_seconds_max{workload="workload-a"}`} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("metrics missing %q:\n%s", expected, body)
 		}

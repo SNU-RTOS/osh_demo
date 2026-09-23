@@ -10,9 +10,8 @@ and operational confidence before adding smarter placement algorithms.
 1. Exercise dispatcher restart while Service workloads are active. A client
    must restart, re-register, and receive new execution grants without manual
    intervention. `shared/realistic_scenario.py` now covers this path.
-2. Persist dispatcher epoch in control-plane status. Broker epoch, client
-   heartbeat/session age, and stale-session expiry are now exposed at runtime;
-   the controller does not yet copy the observed epoch into `NPUTask.status`.
+2. Dispatcher epoch and allocation time are now persisted in control-plane
+   status and refreshed after Service recovery.
 3. Make allocation creation atomic for future multi-replica controllers. The
    current single controller worker serializes reconciliation; leader election
    prevents two active controller processes. A durable Allocation CR or compare
@@ -30,8 +29,8 @@ and operational confidence before adding smarter placement algorithms.
 1. Measure weighted fairness over fixed model pairs and equal-cost synthetic
    requests. Raw grant ratios validate WRR; model throughput ratios do not equal
    share ratios when model execution costs differ.
-2. Add maximum queue wait, grant wait histogram, service restart count, and
-   dispatcher epoch metrics.
+2. Grant wait count/sum/max and service restart count are now exposed. Add
+   bounded histogram buckets after collecting representative device traces.
 3. Profile model load/residency cost. Repeated model configuration currently
    affects latency and should inform a later ModelAware policy.
 4. Add controlled oversubscription only after admission and measured utilization
@@ -42,8 +41,8 @@ and operational confidence before adding smarter placement algorithms.
 1. Publish one controller endpoint that joins logical NPU IDs, dispatcher Pods,
    kubelet device-plugin IDs, and Hailo PCI IDs. The CLI currently reports both
    authoritative views without guessing a mapping that HailoRT does not expose.
-2. Export NPUTask phase, requested share, assigned NPU, pending reason, and
-   allocation age as Prometheus metrics instead of relying only on CLI joins.
+2. NPUTask phase, requested/allocated share, assigned NPU, pending duration,
+   allocation age, and restart count are now exported as Prometheus metrics.
 3. Add Grafana panels and alert rules for over-allocation, missing dispatchers,
    prolonged Pending, zero grants, repeated client restarts, and stale monitor
    samples.

@@ -147,6 +147,10 @@ spec:
               dispatcherEndpoint: *id001
               allocatedShare:
                 type: integer
+              brokerEpoch: *id001
+              allocationTime:
+                type: string
+                format: date-time
               phase: *id001
               executionHash: *id001
               conditions:

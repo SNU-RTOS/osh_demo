@@ -32,13 +32,15 @@ type NPUTaskSpec struct {
 }
 
 type NPUTaskStatus struct {
-	ObservedGeneration int64  `json:"observedGeneration,omitempty"`
-	PodName            string `json:"podName,omitempty"`
-	NodeName           string `json:"nodeName,omitempty"`
-	NPUID              string `json:"npuID,omitempty"`
-	DispatcherEndpoint string `json:"dispatcherEndpoint,omitempty"`
-	AllocatedShare     int32  `json:"allocatedShare,omitempty"`
-	Phase              string `json:"phase,omitempty"`
+	ObservedGeneration int64        `json:"observedGeneration,omitempty"`
+	PodName            string       `json:"podName,omitempty"`
+	NodeName           string       `json:"nodeName,omitempty"`
+	NPUID              string       `json:"npuID,omitempty"`
+	DispatcherEndpoint string       `json:"dispatcherEndpoint,omitempty"`
+	AllocatedShare     int32        `json:"allocatedShare,omitempty"`
+	BrokerEpoch        string       `json:"brokerEpoch,omitempty"`
+	AllocationTime     *metav1.Time `json:"allocationTime,omitempty"`
+	Phase              string       `json:"phase,omitempty"`
 	// ExecutionHash makes terminal batch results durable across pod garbage collection.
 	ExecutionHash string             `json:"executionHash,omitempty"`
 	Conditions    []metav1.Condition `json:"conditions,omitempty"`
@@ -72,6 +74,9 @@ func (in *NPUTask) DeepCopy() *NPUTask {
 	}
 	in.Spec.Resources.DeepCopyInto(&out.Spec.Resources)
 	out.Status.Conditions = append([]metav1.Condition(nil), in.Status.Conditions...)
+	if in.Status.AllocationTime != nil {
+		out.Status.AllocationTime = in.Status.AllocationTime.DeepCopy()
+	}
 	return out
 }
 func (in *NPUTask) DeepCopyObject() runtime.Object { return in.DeepCopy() }

@@ -27,3 +27,9 @@ func TestSnapshotReconstructsDispatcherAllocations(t *testing.T) {
 		t.Fatalf("unexpected snapshot: %#v", states)
 	}
 }
+
+func TestParseBrokerEpoch(t *testing.T) {
+	if got := parseBrokerEpoch("npu_share_capacity 1000\nnpu_share_broker_info{epoch=\"abc123\"} 1\n"); got != "abc123" {
+		t.Fatalf("got epoch %q", got)
+	}
+}

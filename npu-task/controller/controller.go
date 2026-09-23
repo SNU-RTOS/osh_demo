@@ -25,6 +25,7 @@ import (
 )
 
 const hashKey = "npu.snu-rtos.io/execution-hash"
+const brokerEpochKey = "npu.snu-rtos.io/broker-epoch"
 
 type Reconciler struct {
 	client.Client
@@ -107,6 +108,7 @@ func desiredPod(t *api.NPUTask, scheme *runtime.Scheme, allocation *resource.All
 		annotations[sharing.AllocatedShareAnn] = fmt.Sprint(allocation.Share)
 		annotations[sharing.WorkloadIDAnn] = allocation.WorkloadID
 		annotations[sharing.ModelKeyAnn] = allocation.ModelKey
+		annotations[brokerEpochKey] = state.BrokerEpoch
 		env = append(env,
 			corev1.EnvVar{Name: "NPU_SHARE", Value: fmt.Sprint(allocation.Share)},
 			corev1.EnvVar{Name: "HAILORT_SERVICE_ADDRESS", Value: state.Endpoint},
@@ -159,12 +161,31 @@ func (r *Reconciler) status(ctx context.Context, t *api.NPUTask, phase, reason, 
 	t.Status.NPUID = ""
 	t.Status.DispatcherEndpoint = ""
 	t.Status.AllocatedShare = 0
+	t.Status.BrokerEpoch = ""
+	t.Status.AllocationTime = nil
 	if p != nil {
 		t.Status.PodName = p.Name
 		t.Status.NodeName = p.Spec.NodeName
 		if t.Spec.NPUShare > 0 {
 			t.Status.NPUID = p.Annotations[sharing.AssignedNPUAnn]
 			t.Status.AllocatedShare = t.Spec.NPUShare
+			t.Status.BrokerEpoch = p.Annotations[brokerEpochKey]
+			if before.Status.AllocationTime != nil && before.Status.NPUID == t.Status.NPUID {
+				t.Status.AllocationTime = before.Status.AllocationTime.DeepCopy()
+			} else {
+				now := metav1.Now()
+				t.Status.AllocationTime = &now
+			}
+			if r.Registry != nil {
+				if states, err := r.Registry.Snapshot(ctx); err == nil {
+					for _, state := range states {
+						if state.ID == t.Status.NPUID && state.BrokerEpoch != "" {
+							t.Status.BrokerEpoch = state.BrokerEpoch
+							break
+						}
+					}
+				}
+			}
 			for _, env := range p.Spec.Containers[0].Env {
 				if env.Name == "HAILORT_SERVICE_ADDRESS" {
 					t.Status.DispatcherEndpoint = env.Value

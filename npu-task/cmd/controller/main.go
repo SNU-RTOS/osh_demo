@@ -10,7 +10,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
 func main() {
@@ -20,8 +21,9 @@ func main() {
 	must(api.AddToScheme(scheme))
 	m, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{Scheme: scheme, LeaderElection: true,
 		LeaderElectionID: "nputask.npu.snu-rtos.io", LeaderElectionNamespace: os.Getenv("POD_NAMESPACE"),
-		HealthProbeBindAddress: ":8081", Metrics: metrics.Options{BindAddress: ":8080"}})
+		HealthProbeBindAddress: ":8081", Metrics: metricsserver.Options{BindAddress: ":8080"}})
 	must(err)
+	ctrlmetrics.Registry.MustRegister(controller.NewMetricsCollector(m.GetClient()))
 	must((&controller.Reconciler{Client: m.GetClient(), Scheme: scheme, Registry: sharing.PodRegistry{Client: m.GetClient()}}).SetupWithManager(m))
 	must(m.AddHealthzCheck("healthz", healthz.Ping))
 	must(m.AddReadyzCheck("readyz", healthz.Ping))

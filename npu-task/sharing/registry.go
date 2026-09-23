@@ -5,8 +5,12 @@ package sharing
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"sort"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/SNU-RTOS/osh_demo/npu-task/resource"
 	corev1 "k8s.io/api/core/v1"
@@ -31,6 +35,39 @@ type Registry interface {
 }
 
 type PodRegistry struct{ Client client.Client }
+
+var brokerHTTPClient = &http.Client{Timeout: 500 * time.Millisecond}
+
+func brokerEpoch(pod *corev1.Pod) string {
+	if pod.Status.PodIP == "" {
+		return ""
+	}
+	response, err := brokerHTTPClient.Get("http://" + pod.Status.PodIP + ":9790/metrics")
+	if err != nil {
+		return ""
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return ""
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, 1<<20))
+	if err != nil {
+		return ""
+	}
+	return parseBrokerEpoch(string(body))
+}
+
+func parseBrokerEpoch(metrics string) string {
+	const marker = `npu_share_broker_info{epoch="`
+	for _, line := range strings.Split(metrics, "\n") {
+		if strings.HasPrefix(line, marker) {
+			if end := strings.Index(line[len(marker):], `"`); end >= 0 {
+				return line[len(marker) : len(marker)+end]
+			}
+		}
+	}
+	return ""
+}
 
 func (r PodRegistry) Snapshot(ctx context.Context) ([]resource.NPUState, error) {
 	var pods corev1.PodList
@@ -61,7 +98,7 @@ func (r PodRegistry) Snapshot(ctx context.Context) ([]resource.NPUState, error) 
 			capacity = parsed
 		}
 		byID[id] = len(states)
-		states = append(states, resource.NPUState{ID: id, NodeName: pod.Spec.NodeName, Endpoint: endpoint, SchedulerEndpoint: schedulerEndpoint, Health: resource.HealthHealthy, Capacity: capacity})
+		states = append(states, resource.NPUState{ID: id, NodeName: pod.Spec.NodeName, Endpoint: endpoint, SchedulerEndpoint: schedulerEndpoint, BrokerEpoch: brokerEpoch(pod), Health: resource.HealthHealthy, Capacity: capacity})
 	}
 	for i := range pods.Items {
 		pod := &pods.Items[i]

@@ -4,6 +4,7 @@ import (
 	"context"
 	api "github.com/SNU-RTOS/osh_demo/npu-task/api"
 	"github.com/SNU-RTOS/osh_demo/npu-task/resource"
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -235,7 +236,7 @@ func TestSharedTaskUsesFirstFitDispatcherWithoutPhysicalResource(t *testing.T) {
 	r.Registry = staticRegistry{states: []resource.NPUState{
 		{ID: "npu-0", NodeName: "node-a", Endpoint: "unix:///tmp/npu-0.sock", SchedulerEndpoint: "unix:///tmp/npu-0-scheduler.sock", Health: resource.HealthHealthy, Capacity: 1000, Allocated: 800,
 			Workloads: []resource.WorkloadAllocation{{WorkloadID: "existing-a", Share: 800}}},
-		{ID: "npu-1", NodeName: "node-a", Endpoint: "unix:///tmp/npu-1.sock", SchedulerEndpoint: "unix:///tmp/npu-1-scheduler.sock", Health: resource.HealthHealthy, Capacity: 1000, Allocated: 400,
+		{ID: "npu-1", NodeName: "node-a", Endpoint: "unix:///tmp/npu-1.sock", SchedulerEndpoint: "unix:///tmp/npu-1-scheduler.sock", BrokerEpoch: "epoch-one", Health: resource.HealthHealthy, Capacity: 1000, Allocated: 400,
 			Workloads: []resource.WorkloadAllocation{{WorkloadID: "existing-b", Share: 400}}},
 	}}
 	updateTask(t, r, task)
@@ -260,6 +261,9 @@ func TestSharedTaskUsesFirstFitDispatcherWithoutPhysicalResource(t *testing.T) {
 	if !foundEndpoint || !foundScheduler {
 		t.Fatal("dispatcher endpoints were not injected")
 	}
+	if task.Status.BrokerEpoch != "epoch-one" || task.Status.AllocationTime == nil {
+		t.Fatalf("allocation identity missing from status: %#v", task.Status)
+	}
 }
 
 func TestSharedTaskWaitsWhenLogicalCapacityIsFull(t *testing.T) {
@@ -279,5 +283,34 @@ func TestSharedTaskWaitsWhenLogicalCapacityIsFull(t *testing.T) {
 	}
 	if len(pods.Items) != 0 {
 		t.Fatal("pod created without logical capacity")
+	}
+}
+
+func TestMetricsCollectorReportsOperationalState(t *testing.T) {
+	r, task := fixture(t)
+	task.Spec.NPUCount = 0
+	task.Spec.NPUShare = 300
+	r.Registry = staticRegistry{states: []resource.NPUState{{ID: "npu-0", NodeName: "node-a", Endpoint: "unix:///tmp/npu.sock", SchedulerEndpoint: "unix:///tmp/scheduler.sock", BrokerEpoch: "epoch-a", Health: resource.HealthHealthy, Capacity: 1000}}}
+	updateTask(t, r, task)
+	reconcile(t, r, task)
+	p := getPod(t, r, task)
+	p.Status.ContainerStatuses = []corev1.ContainerStatus{{Name: "inference", RestartCount: 2}}
+	if err := r.Status().Update(context.Background(), p); err != nil {
+		t.Fatal(err)
+	}
+	registry := prometheus.NewPedanticRegistry()
+	registry.MustRegister(NewMetricsCollector(r.Client))
+	families, err := registry.Gather()
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := map[string]bool{}
+	for _, family := range families {
+		found[family.GetName()] = true
+	}
+	for _, name := range []string{"nputask_pending_duration_seconds", "nputask_allocation_age_seconds", "nputask_container_restart_count", "nputask_share", "nputask_phase_info"} {
+		if !found[name] {
+			t.Fatalf("metric %s missing", name)
+		}
 	}
 }

@@ -35,6 +35,7 @@ type NPUState struct {
 	NodeName            string
 	Endpoint            string
 	SchedulerEndpoint   string
+	BrokerEpoch         string
 	Health              Health
 	Capacity            int
 	Allocated           int

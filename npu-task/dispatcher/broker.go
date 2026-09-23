@@ -21,8 +21,11 @@ import (
 type Broker struct {
 	mu         sync.Mutex
 	scheduler  *WeightedScheduler
-	waiters    map[string][]chan error
+	waiters    map[string][]grantWaiter
 	grants     map[string]uint64
+	waitCount  map[string]uint64
+	waitSum    map[string]float64
+	waitMax    map[string]float64
 	sessions   map[string]session
 	epoch      string
 	wake       chan struct{}
@@ -36,6 +39,11 @@ type Broker struct {
 type session struct {
 	share    int
 	lastSeen time.Time
+}
+
+type grantWaiter struct {
+	result   chan error
+	queuedAt time.Time
 }
 
 const logicalCapacity = 1000
@@ -54,7 +62,7 @@ func newBrokerWithTTL(tokenTTL, sessionTTL time.Duration) *Broker {
 	if _, err := rand.Read(bytes); err != nil {
 		panic(fmt.Sprintf("create broker epoch: %v", err))
 	}
-	return &Broker{scheduler: NewWeightedScheduler(), waiters: make(map[string][]chan error), grants: make(map[string]uint64), sessions: make(map[string]session), epoch: hex.EncodeToString(bytes), wake: make(chan struct{}, 1), tokenTTL: tokenTTL, sessionTTL: sessionTTL}
+	return &Broker{scheduler: NewWeightedScheduler(), waiters: make(map[string][]grantWaiter), grants: make(map[string]uint64), waitCount: make(map[string]uint64), waitSum: make(map[string]float64), waitMax: make(map[string]float64), sessions: make(map[string]session), epoch: hex.EncodeToString(bytes), wake: make(chan struct{}, 1), tokenTTL: tokenTTL, sessionTTL: sessionTTL}
 }
 
 func (b *Broker) Register(id string, share int) error {
@@ -88,8 +96,8 @@ func (b *Broker) unregisterLocked(id string, waiterErr error) bool {
 	b.scheduler.Unregister(id)
 	delete(b.sessions, id)
 	for _, waiter := range b.waiters[id] {
-		waiter <- waiterErr
-		close(waiter)
+		waiter.result <- waiterErr
+		close(waiter.result)
 	}
 	delete(b.waiters, id)
 	wasInFlight := b.busy && b.inFlight == id
@@ -133,7 +141,7 @@ func (b *Broker) Acquire(ctx context.Context, id string) error {
 		b.mu.Unlock()
 		return err
 	}
-	b.waiters[id] = append(b.waiters[id], granted)
+	b.waiters[id] = append(b.waiters[id], grantWaiter{result: granted, queuedAt: time.Now()})
 	b.mu.Unlock()
 	b.notify()
 	select {
@@ -177,7 +185,7 @@ func (b *Broker) Next(ctx context.Context, id string) error {
 		b.mu.Unlock()
 		return err
 	}
-	b.waiters[id] = append(b.waiters[id], granted)
+	b.waiters[id] = append(b.waiters[id], grantWaiter{result: granted, queuedAt: time.Now()})
 	b.busy, b.inFlight = false, ""
 	b.mu.Unlock()
 	b.notify()
@@ -226,11 +234,17 @@ func (b *Broker) Run(ctx context.Context) {
 			waiter := b.waiters[id][0]
 			b.waiters[id] = b.waiters[id][1:]
 			b.grants[id]++
+			wait := time.Since(waiter.queuedAt).Seconds()
+			b.waitCount[id]++
+			b.waitSum[id] += wait
+			if wait > b.waitMax[id] {
+				b.waitMax[id] = wait
+			}
 			b.busy, b.inFlight = true, id
 			b.token++
 			token := b.token
-			waiter <- nil
-			close(waiter)
+			waiter.result <- nil
+			close(waiter.result)
 			b.mu.Unlock()
 			time.AfterFunc(b.tokenTTL, func() {
 				b.mu.Lock()
@@ -373,5 +387,8 @@ func (b *Broker) MetricsHandler(w http.ResponseWriter, _ *http.Request) {
 	for workloadID, grants := range b.grants {
 		id := strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(workloadID)
 		fmt.Fprintf(w, "npu_share_grants_total{workload=\"%s\"} %d\n", id, grants)
+		fmt.Fprintf(w, "npu_share_grant_wait_seconds_count{workload=\"%s\"} %d\n", id, b.waitCount[workloadID])
+		fmt.Fprintf(w, "npu_share_grant_wait_seconds_sum{workload=\"%s\"} %.6f\n", id, b.waitSum[workloadID])
+		fmt.Fprintf(w, "npu_share_grant_wait_seconds_max{workload=\"%s\"} %.6f\n", id, b.waitMax[workloadID])
 	}
 }

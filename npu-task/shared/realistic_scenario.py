@@ -72,12 +72,28 @@ def dispatcher_metrics(npu_id):
     return deployment, text
 
 
+def controller_metrics():
+    pods = json.loads(kubectl("get", "pods", "-n", "npu-task-system",
+                             "-l", "app=npu-task-controller", "-o", "json"))["items"]
+    ready = next(pod for pod in pods if pod.get("status", {}).get("phase") == "Running")
+    name = ready["metadata"]["name"]
+    return kubectl("get", "--raw", f"/api/v1/namespaces/npu-task-system/pods/{name}:8080/proxy/metrics")
+
+
 def grants(metrics, workload_id):
     prefix = f'npu_share_grants_total{{workload="{workload_id}"}} '
     for line in metrics.splitlines():
         if line.startswith(prefix):
             return int(float(line[len(prefix):]))
     return 0
+
+
+def metric(metrics, name, workload_id):
+    prefix = f'{name}{{workload="{workload_id}"}} '
+    for line in metrics.splitlines():
+        if line.startswith(prefix):
+            return float(line[len(prefix):])
+    return None
 
 
 def restart_count(pod_name):
@@ -141,6 +157,19 @@ def main():
         if not active_ages or any(age is None or age > 15 for age in active_ages):
             raise RuntimeError(f"heartbeat session ages are stale: {active_ages}")
         result["checks"].append("broker-epoch-and-fresh-heartbeats-visible")
+        for name, _ in expected:
+            current = task(name)
+            if not current["status"].get("allocationTime") or not current["status"].get("brokerEpoch"):
+                raise RuntimeError(f"{name}: allocation time or broker epoch missing from status")
+        result["checks"].append("allocation-time-and-broker-epoch-persisted")
+        control_metrics = controller_metrics()
+        for name in ("nputask_pending_duration_seconds", "nputask_allocation_age_seconds",
+                     "nputask_container_restart_count", "nputask_share", "nputask_phase_info"):
+            if name not in control_metrics:
+                raise RuntimeError(f"controller metric {name} is missing")
+        if 'task="urgent-detection"' not in control_metrics or 'reason="InsufficientNPUShare"' not in control_metrics:
+            raise RuntimeError("pending task labels are missing from controller metrics")
+        result["checks"].append("controller-operational-metrics-visible")
 
         kubectl("patch", "nputask", "classification-service", "-n", NAMESPACE,
                 "--type=merge", "-p", '{"spec":{"suspend":true}}')
@@ -156,6 +185,7 @@ def main():
 
         camera = task("camera-service")
         camera_uid, camera_pod = camera["metadata"]["uid"], camera["status"]["podName"]
+        allocation_time = camera["status"].get("allocationTime")
         before_restarts = restart_count(camera_pod)
         deployment, _ = dispatcher_metrics("npu-0")
         kubectl("rollout", "restart", f"deployment/{deployment}", "-n", "npu-task-system")
@@ -168,7 +198,8 @@ def main():
             if current.get("status", {}).get("phase") == "Running":
                 _, metrics = dispatcher_metrics("npu-0")
                 recovered_grants = grants(metrics, camera_uid)
-                if restart_count(camera_pod) > before_restarts and recovered_grants >= 20:
+                epoch_status = current.get("status", {}).get("brokerEpoch")
+                if restart_count(camera_pod) > before_restarts and recovered_grants >= 20 and epoch_status != epoch_before:
                     break
             time.sleep(2)
         else:
@@ -182,6 +213,15 @@ def main():
         if camera_state["session_age_seconds"] is None or camera_state["session_age_seconds"] > 15:
             raise RuntimeError(f"recovered camera heartbeat is stale: {camera_state['session_age_seconds']}")
         result["checks"].append(f"broker-epoch-changed:{epoch_before}->{epoch_after}")
+        camera = task("camera-service")
+        if camera["status"].get("brokerEpoch") != epoch_after:
+            raise RuntimeError("controller status does not contain the current broker epoch")
+        if camera["status"].get("allocationTime") != allocation_time:
+            raise RuntimeError("allocation time changed during dispatcher recovery")
+        _, metrics = dispatcher_metrics("npu-0")
+        if metric(metrics, "npu_share_grant_wait_seconds_count", camera_uid) is None:
+            raise RuntimeError("grant wait metrics are missing")
+        result["checks"].append("status-epoch-recovered-and-grant-wait-visible")
         failed = [work["name"] for work in final["workloads"] if work["phase"] == "Failed"]
         if failed:
             raise RuntimeError(f"unexpected failed workloads after recovery: {failed}")

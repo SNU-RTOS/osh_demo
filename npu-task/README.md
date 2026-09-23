@@ -143,6 +143,15 @@ python3 tests/e2e.py --cycles 100 --output results/acceptance.json
 `podresources` reports kubelet-assigned device IDs per container. Node
 `allocatable` is total usable inventory, not the number currently free. Controller
 runtime metrics are available on container port 8080, health checks on 8081.
+The controller exports `nputask_pending_duration_seconds`,
+`nputask_allocation_age_seconds`, `nputask_container_restart_count`, requested
+and allocated `nputask_share`, and `nputask_phase_info`. Shared task status keeps
+the allocation timestamp and current dispatcher broker epoch.
+
+```sh
+CONTROLLER_POD=$(kubectl -n npu-task-system get pod -l app=npu-task-controller -o jsonpath='{.items[0].metadata.name}')
+kubectl get --raw "/api/v1/namespaces/npu-task-system/pods/${CONTROLLER_POD}:8080/proxy/metrics"
+```
 
 The end-to-end test creates and deletes its own namespace. It verifies 3+5
 concurrent inference, a waiting 2-device task, release while another task keeps

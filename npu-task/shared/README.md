@@ -105,7 +105,9 @@ python3 npu-task/tools/npu_monitor.py --json > /tmp/npu-state.json
 
 The display includes logical capacity, allocated/free share, active workload
 count, dispatcher Pod/node/physical ID and broker epoch, every task's request and assignment,
-phase, active/done state, cumulative execution grants, and condition reason.
+phase, active/done state, cumulative execution grants, average grant wait, container
+restart count, and condition reason. JSON output also includes allocation age,
+pending duration, maximum grant wait, session age, and the epoch persisted in task status.
 Active workloads also show their last session heartbeat age. Registrations with
 no command or heartbeat for 45 seconds are removed by the broker.
 Pending tasks are repeated in a dedicated section with the full admission

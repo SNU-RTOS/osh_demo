@@ -2,6 +2,7 @@
 """One-screen allocation and runtime view for NPUTask workloads."""
 
 import argparse
+import datetime
 import json
 import os
 import re
@@ -97,6 +98,16 @@ def condition(task):
     return current.get("reason", "-"), current.get("message", "-")
 
 
+def age_seconds(timestamp):
+    if not timestamp:
+        return None
+    try:
+        value = datetime.datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+        return max(0, (datetime.datetime.now(datetime.timezone.utc) - value).total_seconds())
+    except ValueError:
+        return None
+
+
 def snapshot(namespace, podresources_path):
     selector = ["-A"] if namespace == "" else ["-n", namespace]
     tasks = kubectl_json("get", "nputasks", *selector).get("items", [])
@@ -134,6 +145,7 @@ def snapshot(namespace, podresources_path):
         }
 
     workloads = []
+    pods_by_name = {(pod["metadata"]["namespace"], pod["metadata"]["name"]): pod for pod in pods}
     for task in tasks:
         metadata, spec, status = task["metadata"], task.get("spec", {}), task.get("status", {})
         reason, message = condition(task)
@@ -145,11 +157,17 @@ def snapshot(namespace, podresources_path):
         runtime = dispatchers.get(npu_id, {}).get("runtime_metrics", [])
         workload_id = metadata.get("uid", "")
         grants = int(metric(runtime, "npu_share_grants_total", "workload", workload_id))
+        wait_count = metric(runtime, "npu_share_grant_wait_seconds_count", "workload", workload_id)
+        wait_sum = metric(runtime, "npu_share_grant_wait_seconds_sum", "workload", workload_id)
+        wait_max = metric(runtime, "npu_share_grant_wait_seconds_max", "workload", workload_id)
         session_age = metric(runtime, "npu_share_session_age_seconds", "workload", workload_id, default=-1)
         active = any(name == "npu_share_allocated" and labels.get("workload") == workload_id
                      for name, labels, _ in runtime)
         model_key = spec.get("model", {}).get("key") or os.path.basename(spec.get("model", {}).get("path", "-"))
         model_metric = models.get(model_key.replace("-", "_"), models.get(model_key, {}))
+        pod = pods_by_name.get((metadata["namespace"], pod_name), {})
+        restart_count = sum(item.get("restartCount", 0) for item in pod.get("status", {}).get("containerStatuses", []))
+        ready_condition = next((item for item in status.get("conditions", []) if item.get("type") == "Ready"), {})
         workloads.append({
             "namespace": metadata["namespace"], "name": metadata["name"], "pod": pod_name,
             "mode": "shared" if shared else "exclusive",
@@ -158,6 +176,12 @@ def snapshot(namespace, podresources_path):
             "allocated_share": status.get("allocatedShare", 0), "phase": status.get("phase", "Pending"),
             "runtime_active": active, "grants": grants, "model": model_key,
             "session_age_seconds": session_age if session_age >= 0 else None,
+            "grant_wait_average_seconds": wait_sum / wait_count if wait_count else None,
+            "grant_wait_max_seconds": wait_max if wait_count else None,
+            "restart_count": restart_count,
+            "broker_epoch": status.get("brokerEpoch"),
+            "allocation_age_seconds": age_seconds(status.get("allocationTime")),
+            "pending_duration_seconds": age_seconds(ready_condition.get("lastTransitionTime")) if status.get("phase") == "Pending" else None,
             "model_utilization": model_metric.get("utilization"), "model_fps": model_metric.get("fps"),
             "reason": reason, "message": message,
         })
@@ -197,16 +221,17 @@ def render(data):
         for model, values in sorted(data["model_metrics"].items()):
             print(f"- {model}: utilization={values['utilization']:.1f}% fps={values['fps']:.1f}")
     print("\nWORKLOADS")
-    print(f"{'NAMESPACE/NAME':<30} {'POD':<22} {'MODE':<9} {'REQUEST':>10} {'NPU':<8} {'PHYSICAL':<16} {'PHASE':<10} {'USE':<12} {'SEEN':>7} {'REASON'}")
+    print(f"{'NAMESPACE/NAME':<30} {'POD':<22} {'MODE':<9} {'REQUEST':>10} {'NPU':<8} {'PHYSICAL':<16} {'PHASE':<10} {'USE':<12} {'WAIT':>8} {'RST':>3} {'REASON'}")
     for work in data["workloads"]:
         use = f"active/{work['grants']}" if work["runtime_active"] else (f"done/{work['grants']}" if work["grants"] else "-")
-        seen = f"{work['session_age_seconds']:.1f}s" if work["session_age_seconds"] is not None else "-"
+        wait = f"{work['grant_wait_average_seconds']*1000:.1f}ms" if work["grant_wait_average_seconds"] is not None else "-"
         physical = ",".join(work["physical_devices"]) or "-"
-        print(f"{short(work['namespace']+'/'+work['name'],30):<30} {short(work['pod'],22):<22} {work['mode']:<9} {work['requested']:>10} {work['assigned_npu']:<8} {short(physical,16):<16} {work['phase']:<10} {use:<12} {seen:>7} {work['reason']}")
+        print(f"{short(work['namespace']+'/'+work['name'],30):<30} {short(work['pod'],22):<22} {work['mode']:<9} {work['requested']:>10} {work['assigned_npu']:<8} {short(physical,16):<16} {work['phase']:<10} {use:<12} {wait:>8} {work['restart_count']:>3} {work['reason']}")
     if data["pending"]:
         print("\nPENDING REQUESTS")
         for work in data["pending"]:
-            print(f"- {work['namespace']}/{work['name']}: {work['requested']} — {work['reason']}: {work['message']}")
+            duration = f" for {work['pending_duration_seconds']:.1f}s" if work["pending_duration_seconds"] is not None else ""
+            print(f"- {work['namespace']}/{work['name']}: {work['requested']}{duration} — {work['reason']}: {work['message']}")
     print("\nMeasured utilization is observation; requested/allocated share is admission weight, not a throughput guarantee.")
 
 
