@@ -1,0 +1,54 @@
+apiVersion: npu.snu-rtos.io/v1alpha1
+kind: NPUTask
+metadata: {name: camera-service, namespace: npu-realistic}
+spec:
+  image: npu-share-client:local
+  command: [/usr/local/bin/shared_runner]
+  args: [--hef, $(MODEL_PATH), --runs, "20000"]
+  model: {path: /opt/models/yolov10s.hef, key: yolov10s}
+  npuShare: 450
+  mode: Service
+---
+apiVersion: npu.snu-rtos.io/v1alpha1
+kind: NPUTask
+metadata: {name: classification-service, namespace: npu-realistic}
+spec:
+  image: npu-share-client:local
+  command: [/usr/local/bin/shared_runner]
+  args: [--hef, $(MODEL_PATH), --runs, "50000"]
+  model: {path: /opt/models/tiny_yolov4.hef, key: tiny-yolov4}
+  npuShare: 350
+  mode: Service
+---
+apiVersion: npu.snu-rtos.io/v1alpha1
+kind: NPUTask
+metadata: {name: depth-service, namespace: npu-realistic}
+spec:
+  image: npu-share-client:local
+  command: [/usr/local/bin/shared_runner]
+  args: [--hef, $(MODEL_PATH), --runs, "20000"]
+  model: {path: /opt/models/yolov10s.hef, key: yolov10s}
+  npuShare: 400
+  mode: Service
+---
+apiVersion: npu.snu-rtos.io/v1alpha1
+kind: NPUTask
+metadata: {name: batch-burst, namespace: npu-realistic}
+spec:
+  image: npu-share-client:local
+  command: [/usr/local/bin/shared_runner]
+  args: [--hef, $(MODEL_PATH), --runs, "20000"]
+  model: {path: /opt/models/tiny_yolov4.hef, key: tiny-yolov4}
+  npuShare: 500
+  mode: Batch
+---
+apiVersion: npu.snu-rtos.io/v1alpha1
+kind: NPUTask
+metadata: {name: urgent-detection, namespace: npu-realistic}
+spec:
+  image: npu-share-client:local
+  command: [/usr/local/bin/shared_runner]
+  args: [--hef, $(MODEL_PATH), --runs, "1000"]
+  model: {path: /opt/models/yolov10s.hef, key: yolov10s}
+  npuShare: 300
+  mode: Batch

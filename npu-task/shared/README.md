@@ -128,7 +128,37 @@ kubectl -n npu-task-system exec deployment/npu-share-dispatcher-0 \
 Dispatcher metrics include capacity, allocated/free share, queue depth, active
 workloads, per-workload allocation, and cumulative grants.
 
-## 5. Diagnose and clean up
+## 5. Run the realistic mixed-arrival and recovery scenario
+
+After the complete validation has installed the images and dispatchers, run:
+
+```bash
+python3 npu-task/shared/realistic_scenario.py
+```
+
+The runner refuses to start while another shared workload is active. It then
+restarts both test dispatchers to create clean broker epochs and later restarts
+dispatcher 0 once more for fault injection, so use it only on the designated
+test cluster.
+
+This scenario applies workloads one at a time to model real arrivals:
+
+- a 450-share YOLO camera Service and 350-share classification Service on NPU 0;
+- a 400-share depth Service and 500-share batch burst on NPU 1;
+- a 300-share urgent request that cannot fit and must remain Pending;
+- suspension of the classification Service, followed by admission of the urgent request; and
+- restart of NPU 0's dispatcher while the camera Service is active.
+
+It passes only when the monitor exposes the Pending reason, released capacity is
+reused on the expected NPU, and the camera Service restarts, re-registers, and
+receives new grants after dispatcher replacement. Results are written to
+`npu-task/results/realistic-scenario.json`. Use `--keep` to retain the namespace
+after success for manual inspection.
+
+The prioritized follow-up work is documented in
+[`../NEXT_STEPS.md`](../NEXT_STEPS.md).
+
+## 6. Diagnose and clean up
 
 ```bash
 kubectl get nputasks -A

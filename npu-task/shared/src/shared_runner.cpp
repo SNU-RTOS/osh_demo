@@ -8,7 +8,9 @@
 
 #include <cerrno>
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -20,6 +22,10 @@
 using namespace hailort;
 
 namespace {
+std::atomic<bool> stop_requested{false};
+
+void stop_handler(int) { stop_requested.store(true); }
+
 bool scheduler_command(const std::string &address, const std::string &command)
 {
     const std::string prefix = "unix://";
@@ -57,6 +63,20 @@ bool scheduler_command(const std::string &address, const std::string &command)
     return true;
 }
 
+class RegistrationGuard {
+public:
+    RegistrationGuard(const char *scheduler, const char *workload, bool active) :
+        m_scheduler(scheduler ? scheduler : ""), m_workload(workload ? workload : ""), m_active(active) {}
+    ~RegistrationGuard()
+    {
+        if (m_active) scheduler_command(m_scheduler, "UNREGISTER " + m_workload);
+    }
+private:
+    std::string m_scheduler;
+    std::string m_workload;
+    bool m_active;
+};
+
 template<typename T>
 bool require(const Expected<T> &result, const char *operation)
 {
@@ -75,6 +95,8 @@ bool require_status(hailo_status status, const char *operation)
 
 int main(int argc, char **argv)
 {
+	std::signal(SIGINT, stop_handler);
+	std::signal(SIGTERM, stop_handler);
     std::string hef;
     uint64_t runs = 100;
     for (int i = 1; i < argc; ++i) {
@@ -92,6 +114,7 @@ int main(int argc, char **argv)
         return 2;
     }
     if (shared && !scheduler_command(scheduler, std::string("REGISTER ") + workload + " " + share)) return 3;
+    RegistrationGuard registration(scheduler, workload, shared);
 
     hailo_vdevice_params_t params{};
     if (!require_status(hailo_init_vdevice_params(&params), "hailo_init_vdevice_params")) return 4;
@@ -136,11 +159,11 @@ int main(int argc, char **argv)
     latencies.reserve(runs);
     const auto started = std::chrono::steady_clock::now();
     if (shared && !scheduler_command(scheduler, std::string("ACQUIRE ") + workload)) return 11;
-    for (uint64_t i = 0; i < runs; ++i) {
+    for (uint64_t i = 0; i < runs && !stop_requested.load(); ++i) {
         const auto begin = std::chrono::steady_clock::now();
         if (!require_status(configured.run(bindings, std::chrono::seconds(30)), "inference")) return 12;
         if (shared) {
-            const auto command = ((i + 1) < runs) ? "NEXT " : "COMPLETE ";
+            const auto command = ((i + 1) < runs && !stop_requested.load()) ? "NEXT " : "COMPLETE ";
             if (!scheduler_command(scheduler, std::string(command) + workload)) return 13;
         }
         const auto latency = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - begin).count();
@@ -149,14 +172,14 @@ int main(int argc, char **argv)
         latencies.push_back(static_cast<uint64_t>(latency));
     }
     const auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
-    if (shared) scheduler_command(scheduler, std::string("UNREGISTER ") + workload);
+    if (latencies.empty()) return stop_requested.load() ? 0 : 14;
     std::sort(latencies.begin(), latencies.end());
     const auto p95_latency_us = latencies[(latencies.size() * 95 + 99) / 100 - 1];
-    const auto average_latency_us = latency_sum_us / runs;
-    const auto throughput_fps = (static_cast<double>(runs) * 1000000.0) / static_cast<double>(elapsed_us);
+    const auto average_latency_us = latency_sum_us / latencies.size();
+    const auto throughput_fps = (static_cast<double>(latencies.size()) * 1000000.0) / static_cast<double>(elapsed_us);
     std::cout << "NPU_E2E_OK mode=" << (shared ? "shared" : "exclusive")
               << " workload=" << (shared ? workload : "direct") << " share=" << (shared ? share : "1000")
-              << " runs=" << runs << " elapsed_us=" << elapsed_us << " throughput_fps=" << throughput_fps
+              << " runs=" << latencies.size() << " elapsed_us=" << elapsed_us << " throughput_fps=" << throughput_fps
               << " average_latency_us=" << average_latency_us << " p95_latency_us=" << p95_latency_us
               << " max_latency_us=" << max_latency_us << '\n';
     return 0;

@@ -25,7 +25,9 @@ discovers ready dispatcher Pods, reconstructs their active allocations, applies
 First Fit, and injects `HAILORT_SERVICE_ADDRESS`. Use
 [`shared/README.md`](shared/README.md) is the clone-to-monitor runbook for the
 two-dispatcher, four-client hardware validation. It includes image construction,
-workload execution, live allocation/pending monitoring, evaluation, and cleanup.
+workload execution, live allocation/pending monitoring, evaluation, cleanup,
+and a realistic mixed-arrival/dispatcher-recovery scenario. Prioritized work
+after this milestone is tracked in [`NEXT_STEPS.md`](NEXT_STEPS.md).
 
 The exporter DaemonSet in `deploy/monitor-exporter.yaml` reads HailoRT monitor
 files and serves metrics on port 9788. Its image contains the pinned HailoRT
