@@ -8,6 +8,7 @@ spec:
   model: {path: /opt/models/yolov10s.hef, key: yolov10s}
   npuCount: 1
   mode: Batch
+  suspend: true
 ---
 apiVersion: npu.snu-rtos.io/v1alpha1
 kind: NPUTask
@@ -19,6 +20,7 @@ spec:
   model: {path: /opt/models/tiny_yolov4.hef, key: tiny-yolov4}
   npuCount: 1
   mode: Batch
+  suspend: true
 ---
 apiVersion: npu.snu-rtos.io/v1alpha1
 kind: NPUTask
@@ -30,6 +32,7 @@ spec:
   model: {path: /opt/models/yolov10s.hef, key: yolov10s}
   npuCount: 1
   mode: Batch
+  suspend: true
 ---
 apiVersion: npu.snu-rtos.io/v1alpha1
 kind: NPUTask
@@ -41,3 +44,4 @@ spec:
   model: {path: /opt/models/tiny_yolov4.hef, key: tiny-yolov4}
   npuCount: 1
   mode: Batch
+  suspend: true

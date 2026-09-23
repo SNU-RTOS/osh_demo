@@ -123,7 +123,8 @@ def main():
     parser.add_argument("--output", default=str(ROOT / "npu-task/results/realistic-scenario.json"))
     parser.add_argument("--keep", action="store_true", help="retain namespace after success")
     args = parser.parse_args()
-    result = {"started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "passed": False, "stages": [], "checks": []}
+    result = {"schema_version": 1, "started_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+              "passed": False, "stages": [], "checks": [], "measurements": {}}
     output = pathlib.Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     kubectl("delete", "namespace", NAMESPACE, "--ignore-not-found", "--wait=true")
@@ -144,8 +145,10 @@ def main():
                 raise RuntimeError(f"{name}: expected {npu_id}, got {actual}")
             result["checks"].append(f"arrival-placement:{name}:{actual}")
 
+        pending_started = time.monotonic()
         apply_one("urgent-detection")
         wait_task("urgent-detection", {"Pending"}, timeout=60, reason="InsufficientNPUShare")
+        result["measurements"]["pending_detection_seconds"] = time.monotonic() - pending_started
         before = snapshot("capacity-full-and-urgent-pending", result)
         if len(before["pending"]) != 1 or before["pending"][0]["name"] != "urgent-detection":
             raise RuntimeError("monitor did not expose the urgent pending request")
@@ -171,6 +174,7 @@ def main():
             raise RuntimeError("pending task labels are missing from controller metrics")
         result["checks"].append("controller-operational-metrics-visible")
 
+        admission_started = time.monotonic()
         kubectl("patch", "nputask", "classification-service", "-n", NAMESPACE,
                 "--type=merge", "-p", '{"spec":{"suspend":true}}')
         wait_task("classification-service", {"Suspended"}, timeout=120)
@@ -178,6 +182,7 @@ def main():
         if urgent["status"].get("npuID") != "npu-0":
             raise RuntimeError("urgent request did not use the released npu-0 capacity")
         result["checks"].append("release-admits-urgent-on-npu-0")
+        result["measurements"]["pending_admission_after_release_seconds"] = time.monotonic() - admission_started
         snapshot("released-capacity-and-urgent-admitted", result)
 
         wait_task("urgent-detection", {"Succeeded"}, timeout=180)
@@ -188,6 +193,7 @@ def main():
         allocation_time = camera["status"].get("allocationTime")
         before_restarts = restart_count(camera_pod)
         deployment, _ = dispatcher_metrics("npu-0")
+        recovery_started = time.monotonic()
         kubectl("rollout", "restart", f"deployment/{deployment}", "-n", "npu-task-system")
         kubectl("rollout", "status", f"deployment/{deployment}", "-n", "npu-task-system", "--timeout=180s")
 
@@ -205,6 +211,8 @@ def main():
         else:
             raise RuntimeError("camera service did not restart, re-register, and resume grants")
         result["checks"].append(f"dispatcher-recovery:restart-count>{before_restarts}:grants={recovered_grants}")
+        result["measurements"]["dispatcher_recovery_seconds"] = time.monotonic() - recovery_started
+        result["measurements"]["recovered_grants"] = recovered_grants
         final = snapshot("dispatcher-restarted-and-service-recovered", result)
         epoch_after = next(npu["broker_epoch"] for npu in final["npus"] if npu["id"] == "npu-0")
         if epoch_after == epoch_before:

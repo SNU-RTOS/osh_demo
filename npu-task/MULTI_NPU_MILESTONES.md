@@ -74,14 +74,17 @@ physical device to the client Pod. The implementation was validated on
   execution is gated by the broker's smooth weighted round-robin grants. The
   validation run recorded 2,000 grants for each assigned workload.
 
-### M6 — monitoring and evaluation
+### M6 — monitoring and measurement readiness
 
 - Export allocated/available share, measured utilization, queue depth, active
   workloads, throughput, average latency, and P95 latency per NPU.
 - Compare exclusive and shared runs with two NPUs and four workloads.
-- Status: passed. HailoRT monitor metrics expose per-device utilization and
-  per-model utilization/FPS independently from allocated share. The reproducible
-  comparison is stored in `results/multi-npu-share.json`.
+- Status: implementation passed and the formal campaign is ready. HailoRT
+  monitor metrics expose per-device utilization and per-model utilization/FPS
+  independently from allocated share. `shared/run_measurements.sh` now performs
+  a two-NPU exclusive/shared comparison, three recovery trials, and five trials
+  each of same-model and mixed-model WRR fairness. A new campaign must be run to
+  produce the final evaluation artifacts described in `MEASUREMENT_GUIDE.md`.
 
 ## Validation result
 

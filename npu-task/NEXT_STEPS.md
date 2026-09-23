@@ -26,9 +26,9 @@ and operational confidence before adding smarter placement algorithms.
 
 ## P1 — scheduling and QoS evidence
 
-1. Measure weighted fairness over fixed model pairs and equal-cost synthetic
-   requests. Raw grant ratios validate WRR; model throughput ratios do not equal
-   share ratios when model execution costs differ.
+1. The formal measurement harness now measures weighted fairness over same-model
+   and mixed-model pairs and reports Student-t 95% confidence intervals. Run the
+   campaign and preserve its environment metadata before interpreting results.
 2. Grant wait count/sum/max and service restart count are now exposed. Add
    bounded histogram buckets after collecting representative device traces.
 3. Profile model load/residency cost. Repeated model configuration currently

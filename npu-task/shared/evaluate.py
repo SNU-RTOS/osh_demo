@@ -39,6 +39,13 @@ def summary(items):
         "max_p95_latency_us": max(x["p95_latency_us"] for x in items),
     }
 
+def exclusive_summary(items):
+    result = summary(items)
+    waves = [items[:2], items[2:]]
+    result["execution_waves"] = [[item["name"] for item in wave] for wave in waves]
+    result["throughput_fps"] = sum(sum(item["throughput_fps"] for item in wave) for wave in waves) / len(waves)
+    return result
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--namespace", default="default")
@@ -48,7 +55,7 @@ def main():
     shared = [task_result(args.namespace, f"share-{suffix}") for suffix in "abcd"]
     result = {
         "recorded_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "exclusive": {"tasks": exclusive, "summary": summary(exclusive), "physical_npus": 4},
+        "exclusive": {"tasks": exclusive, "summary": exclusive_summary(exclusive), "physical_npus": 2},
         "shared": {"tasks": shared, "summary": summary(shared), "physical_npus": len({x["npu_id"] for x in shared})},
     }
     output = pathlib.Path(args.output)

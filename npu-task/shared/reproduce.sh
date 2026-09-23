@@ -14,22 +14,28 @@ kubectl apply -f "${repo_dir}/npu-task/deploy/crd.yaml"
 kubectl apply -f "${repo_dir}/npu-task/deploy/controller.yaml"
 kubectl -n npu-task-system set image deployment/npu-task-controller controller=npu-task-controller:share
 kubectl -n npu-task-system rollout status deployment/npu-task-controller --timeout=120s
-kubectl apply -f "${repo_dir}/npu-task/shared/dispatchers.yaml"
-kubectl -n npu-task-system rollout restart deployment/npu-share-dispatcher-0 deployment/npu-share-dispatcher-1
-kubectl -n npu-task-system rollout status deployment/npu-share-dispatcher-0 --timeout=180s
-kubectl -n npu-task-system rollout status deployment/npu-share-dispatcher-1 --timeout=180s
 kubectl apply -f "${repo_dir}/npu-task/deploy/monitor-exporter.yaml"
 kubectl -n npu-task-system set image daemonset/hailo-monitor-exporter exporter=hailo-monitor-exporter:share
 kubectl -n npu-task-system rollout restart daemonset/hailo-monitor-exporter
 kubectl -n npu-task-system rollout status daemonset/hailo-monitor-exporter --timeout=120s
 
 kubectl -n "${namespace}" delete nputask exclusive-a exclusive-b exclusive-c exclusive-d --ignore-not-found --wait=true
+kubectl -n npu-task-system delete deployment npu-share-dispatcher-0 npu-share-dispatcher-1 --ignore-not-found --wait=true
 kubectl -n "${namespace}" apply -f "${repo_dir}/npu-task/shared/exclusive-workloads.yaml"
-for task in exclusive-a exclusive-b exclusive-c exclusive-d; do
-    kubectl -n "${namespace}" wait "nputask/${task}" --for=jsonpath='{.status.phase}'=Succeeded --timeout=300s
-    pod="$(kubectl -n "${namespace}" get "nputask/${task}" -o jsonpath='{.status.podName}')"
-    kubectl -n "${namespace}" logs "${pod}" | grep -q 'NPU_E2E_OK mode=exclusive.*runs=500'
+for wave in "exclusive-a exclusive-b" "exclusive-c exclusive-d"; do
+    for task in ${wave}; do
+        kubectl -n "${namespace}" patch "nputask/${task}" --type=merge -p '{"spec":{"suspend":false}}'
+    done
+    for task in ${wave}; do
+        kubectl -n "${namespace}" wait "nputask/${task}" --for=jsonpath='{.status.phase}'=Succeeded --timeout=300s
+        pod="$(kubectl -n "${namespace}" get "nputask/${task}" -o jsonpath='{.status.podName}')"
+        kubectl -n "${namespace}" logs "${pod}" | grep -q 'NPU_E2E_OK mode=exclusive.*runs=500'
+    done
 done
+
+kubectl apply -f "${repo_dir}/npu-task/shared/dispatchers.yaml"
+kubectl -n npu-task-system rollout status deployment/npu-share-dispatcher-0 --timeout=180s
+kubectl -n npu-task-system rollout status deployment/npu-share-dispatcher-1 --timeout=180s
 
 kubectl -n "${namespace}" delete nputask share-a share-b share-c share-d --ignore-not-found --wait=true
 kubectl -n "${namespace}" delete nputask share-overflow --ignore-not-found --wait=true

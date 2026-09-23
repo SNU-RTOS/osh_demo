@@ -22,11 +22,12 @@ lives in `dispatcher/`. The existing exclusive `npuCount` API remains available.
 
 Shared tasks use `spec.npuShare` instead of `spec.npuCount`. The controller
 discovers ready dispatcher Pods, reconstructs their active allocations, applies
-First Fit, and injects `HAILORT_SERVICE_ADDRESS`. Use
+First Fit, and injects `HAILORT_SERVICE_ADDRESS`.
 [`shared/README.md`](shared/README.md) is the clone-to-monitor runbook for the
 two-dispatcher, four-client hardware validation. It includes image construction,
 workload execution, live allocation/pending monitoring, evaluation, cleanup,
-and a realistic mixed-arrival/dispatcher-recovery scenario. Prioritized work
+and a realistic mixed-arrival/dispatcher-recovery scenario. The formal campaign
+protocol is in [`MEASUREMENT_GUIDE.md`](MEASUREMENT_GUIDE.md). Prioritized work
 after this milestone is tracked in [`NEXT_STEPS.md`](NEXT_STEPS.md).
 
 The exporter DaemonSet in `deploy/monitor-exporter.yaml` reads HailoRT monitor

@@ -162,7 +162,23 @@ after success for manual inspection.
 The prioritized follow-up work is documented in
 [`../NEXT_STEPS.md`](../NEXT_STEPS.md).
 
-## 6. Diagnose and clean up
+## 6. Run the formal measurement campaign
+
+After functional smoke tests pass, follow the separate measurement, evaluation,
+and validation protocol in [`../MEASUREMENT_GUIDE.md`](../MEASUREMENT_GUIDE.md).
+The complete campaign command is:
+
+```bash
+RECOVERY_TRIALS=3 FAIRNESS_TRIALS=5 FAIRNESS_DURATION=30 \
+  bash npu-task/shared/run_measurements.sh
+```
+
+It uses only two physical NPUs for the exclusive/shared comparison, repeats the
+recovery case three times, measures same-model and mixed-model WRR fairness five
+times each, computes 95% confidence intervals, and writes a machine-readable
+validation verdict.
+
+## 7. Diagnose and clean up
 
 ```bash
 kubectl get nputasks -A
