@@ -11,22 +11,26 @@
 #include <atomic>
 #include <chrono>
 #include <csignal>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 using namespace hailort;
 
 namespace {
 std::atomic<bool> stop_requested{false};
+std::atomic<bool> broker_failed{false};
 
 void stop_handler(int) { stop_requested.store(true); }
 
-bool scheduler_command(const std::string &address, const std::string &command)
+bool scheduler_command(const std::string &address, const std::string &command, std::string *reply = nullptr)
 {
     const std::string prefix = "unix://";
     if (address.rfind(prefix, 0) != 0) {
@@ -56,25 +60,53 @@ bool scheduler_command(const std::string &address, const std::string &command)
     char response[256]{};
     const auto size = read(fd, response, sizeof(response) - 1);
     close(fd);
-    if (size < 2 || std::string(response, static_cast<size_t>(size)).rfind("OK", 0) != 0) {
+    const std::string result(response, size > 0 ? static_cast<size_t>(size) : 0);
+    if (size < 2 || result.rfind("OK", 0) != 0) {
         std::cerr << "scheduler rejected " << command << ": " << response;
         return false;
     }
+    if (reply) *reply = result;
     return true;
 }
 
 class RegistrationGuard {
 public:
     RegistrationGuard(const char *scheduler, const char *workload, bool active) :
-        m_scheduler(scheduler ? scheduler : ""), m_workload(workload ? workload : ""), m_active(active) {}
+        m_scheduler(scheduler ? scheduler : ""), m_workload(workload ? workload : ""), m_active(active)
+    {
+        if (m_active) {
+            m_heartbeat = std::thread([this] {
+                std::unique_lock<std::mutex> lock(m_mutex);
+                while (!m_condition.wait_for(lock, std::chrono::seconds(10), [this] { return m_stop; })) {
+                    lock.unlock();
+                    if (!scheduler_command(m_scheduler, "HEARTBEAT " + m_workload)) {
+                        broker_failed.store(true);
+                        stop_requested.store(true);
+                        return;
+                    }
+                    lock.lock();
+                }
+            });
+        }
+    }
     ~RegistrationGuard()
     {
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_stop = true;
+        }
+        m_condition.notify_all();
+        if (m_heartbeat.joinable()) m_heartbeat.join();
         if (m_active) scheduler_command(m_scheduler, "UNREGISTER " + m_workload);
     }
 private:
     std::string m_scheduler;
     std::string m_workload;
     bool m_active;
+    bool m_stop = false;
+    std::mutex m_mutex;
+    std::condition_variable m_condition;
+    std::thread m_heartbeat;
 };
 
 template<typename T>
@@ -95,8 +127,8 @@ bool require_status(hailo_status status, const char *operation)
 
 int main(int argc, char **argv)
 {
-	std::signal(SIGINT, stop_handler);
-	std::signal(SIGTERM, stop_handler);
+    std::signal(SIGINT, stop_handler);
+    std::signal(SIGTERM, stop_handler);
     std::string hef;
     uint64_t runs = 100;
     for (int i = 1; i < argc; ++i) {
@@ -113,7 +145,9 @@ int main(int argc, char **argv)
         std::cerr << "invalid model or partial scheduler allocation environment\n";
         return 2;
     }
-    if (shared && !scheduler_command(scheduler, std::string("REGISTER ") + workload + " " + share)) return 3;
+    std::string register_reply;
+    if (shared && !scheduler_command(scheduler, std::string("REGISTER ") + workload + " " + share, &register_reply)) return 3;
+    if (shared) std::cout << "NPU_BROKER_EPOCH " << register_reply.substr(3) << std::flush;
     RegistrationGuard registration(scheduler, workload, shared);
 
     hailo_vdevice_params_t params{};
@@ -172,6 +206,7 @@ int main(int argc, char **argv)
         latencies.push_back(static_cast<uint64_t>(latency));
     }
     const auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count();
+    if (broker_failed.load()) return 15;
     if (latencies.empty()) return stop_requested.load() ? 0 : 14;
     std::sort(latencies.begin(), latencies.end());
     const auto p95_latency_us = latencies[(latencies.size() * 95 + 99) / 100 - 1];

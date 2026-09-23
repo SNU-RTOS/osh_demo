@@ -3,6 +3,8 @@ package dispatcher
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -17,66 +19,126 @@ import (
 // Broker turns concurrent ACQUIRE requests into execution grants selected by
 // the weighted scheduler. Clients acquire one grant before each HailoRT call.
 type Broker struct {
-	mu        sync.Mutex
-	scheduler *WeightedScheduler
-	waiters   map[string][]chan struct{}
-	grants    map[string]uint64
-	wake      chan struct{}
-	busy      bool
-	inFlight  string
-	token     uint64
-	tokenTTL  time.Duration
+	mu         sync.Mutex
+	scheduler  *WeightedScheduler
+	waiters    map[string][]chan error
+	grants     map[string]uint64
+	sessions   map[string]session
+	epoch      string
+	wake       chan struct{}
+	busy       bool
+	inFlight   string
+	token      uint64
+	tokenTTL   time.Duration
+	sessionTTL time.Duration
+}
+
+type session struct {
+	share    int
+	lastSeen time.Time
 }
 
 const logicalCapacity = 1000
 
 func NewBroker() *Broker {
-	return newBroker(35 * time.Second)
+	return newBrokerWithTTL(35*time.Second, 45*time.Second)
 }
 
 func newBroker(tokenTTL time.Duration) *Broker {
-	return &Broker{scheduler: NewWeightedScheduler(), waiters: make(map[string][]chan struct{}), grants: make(map[string]uint64), wake: make(chan struct{}, 1), tokenTTL: tokenTTL}
+	return newBrokerWithTTL(tokenTTL, 45*time.Second)
+
+}
+
+func newBrokerWithTTL(tokenTTL, sessionTTL time.Duration) *Broker {
+	bytes := make([]byte, 8)
+	if _, err := rand.Read(bytes); err != nil {
+		panic(fmt.Sprintf("create broker epoch: %v", err))
+	}
+	return &Broker{scheduler: NewWeightedScheduler(), waiters: make(map[string][]chan error), grants: make(map[string]uint64), sessions: make(map[string]session), epoch: hex.EncodeToString(bytes), wake: make(chan struct{}, 1), tokenTTL: tokenTTL, sessionTTL: sessionTTL}
 }
 
 func (b *Broker) Register(id string, share int) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.scheduler.Register(id, share)
+	if existing, ok := b.sessions[id]; ok {
+		if existing.share != share {
+			return fmt.Errorf("workload %q is already registered with share %d", id, existing.share)
+		}
+		existing.lastSeen = time.Now()
+		b.sessions[id] = existing
+		return nil
+	}
+	if err := b.scheduler.Register(id, share); err != nil {
+		return err
+	}
+	b.sessions[id] = session{share: share, lastSeen: time.Now()}
+	return nil
 }
 
 func (b *Broker) Unregister(id string) {
 	b.mu.Lock()
+	wasInFlight := b.unregisterLocked(id, fmt.Errorf("workload %q was unregistered", id))
+	b.mu.Unlock()
+	if wasInFlight {
+		b.notify()
+	}
+}
+
+func (b *Broker) unregisterLocked(id string, waiterErr error) bool {
 	b.scheduler.Unregister(id)
+	delete(b.sessions, id)
+	for _, waiter := range b.waiters[id] {
+		waiter <- waiterErr
+		close(waiter)
+	}
 	delete(b.waiters, id)
 	wasInFlight := b.busy && b.inFlight == id
 	if wasInFlight {
 		b.busy, b.inFlight = false, ""
 	}
-	b.mu.Unlock()
-	if wasInFlight {
-		select {
-		case b.wake <- struct{}{}:
-		default:
-		}
+	return wasInFlight
+}
+
+func (b *Broker) notify() {
+	select {
+	case b.wake <- struct{}{}:
+	default:
 	}
 }
 
-func (b *Broker) Acquire(ctx context.Context, id string) error {
-	granted := make(chan struct{})
+func (b *Broker) touchLocked(id string) error {
+	current, ok := b.sessions[id]
+	if !ok {
+		return fmt.Errorf("workload %q is not registered", id)
+	}
+	current.lastSeen = time.Now()
+	b.sessions[id] = current
+	return nil
+}
+
+func (b *Broker) Heartbeat(id string) error {
 	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.touchLocked(id)
+}
+
+func (b *Broker) Acquire(ctx context.Context, id string) error {
+	granted := make(chan error, 1)
+	b.mu.Lock()
+	if err := b.touchLocked(id); err != nil {
+		b.mu.Unlock()
+		return err
+	}
 	if err := b.scheduler.Enqueue(id); err != nil {
 		b.mu.Unlock()
 		return err
 	}
 	b.waiters[id] = append(b.waiters[id], granted)
 	b.mu.Unlock()
+	b.notify()
 	select {
-	case b.wake <- struct{}{}:
-	default:
-	}
-	select {
-	case <-granted:
-		return nil
+	case err := <-granted:
+		return err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -84,24 +146,29 @@ func (b *Broker) Acquire(ctx context.Context, id string) error {
 
 func (b *Broker) Complete(id string) error {
 	b.mu.Lock()
+	if err := b.touchLocked(id); err != nil {
+		b.mu.Unlock()
+		return err
+	}
 	if !b.busy || b.inFlight != id {
 		b.mu.Unlock()
 		return fmt.Errorf("workload %q does not own the execution token", id)
 	}
 	b.busy, b.inFlight = false, ""
 	b.mu.Unlock()
-	select {
-	case b.wake <- struct{}{}:
-	default:
-	}
+	b.notify()
 	return nil
 }
 
 // Next atomically completes the current execution and queues the caller's next
 // request before another workload is selected.
 func (b *Broker) Next(ctx context.Context, id string) error {
-	granted := make(chan struct{})
+	granted := make(chan error, 1)
 	b.mu.Lock()
+	if err := b.touchLocked(id); err != nil {
+		b.mu.Unlock()
+		return err
+	}
 	if !b.busy || b.inFlight != id {
 		b.mu.Unlock()
 		return fmt.Errorf("workload %q does not own the execution token", id)
@@ -113,23 +180,38 @@ func (b *Broker) Next(ctx context.Context, id string) error {
 	b.waiters[id] = append(b.waiters[id], granted)
 	b.busy, b.inFlight = false, ""
 	b.mu.Unlock()
+	b.notify()
 	select {
-	case b.wake <- struct{}{}:
-	default:
-	}
-	select {
-	case <-granted:
-		return nil
+	case err := <-granted:
+		return err
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
 func (b *Broker) Run(ctx context.Context) {
+	interval := b.sessionTTL / 3
+	if interval <= 0 {
+		interval = time.Second
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case now := <-ticker.C:
+			b.mu.Lock()
+			wake := false
+			for id, current := range b.sessions {
+				if now.Sub(current.lastSeen) > b.sessionTTL {
+					wake = b.unregisterLocked(id, fmt.Errorf("workload %q session expired", id)) || wake
+				}
+			}
+			b.mu.Unlock()
+			if wake {
+				b.notify()
+			}
 		case <-b.wake:
 			b.mu.Lock()
 			if b.busy {
@@ -147,6 +229,7 @@ func (b *Broker) Run(ctx context.Context) {
 			b.busy, b.inFlight = true, id
 			b.token++
 			token := b.token
+			waiter <- nil
 			close(waiter)
 			b.mu.Unlock()
 			time.AfterFunc(b.tokenTTL, func() {
@@ -213,7 +296,18 @@ func (b *Broker) handle(ctx context.Context, connection net.Conn) {
 			return
 		}
 		err = b.Register(fields[1], share)
-		if err != nil && err.Error() != "workload is already registered" {
+		if err != nil {
+			fmt.Fprintln(connection, "ERROR "+err.Error())
+			return
+		}
+		fmt.Fprintln(connection, "OK "+b.epoch)
+		return
+	case "HEARTBEAT":
+		if len(fields) != 2 {
+			fmt.Fprintln(connection, "ERROR malformed HEARTBEAT")
+			return
+		}
+		if err := b.Heartbeat(fields[1]); err != nil {
 			fmt.Fprintln(connection, "ERROR "+err.Error())
 			return
 		}
@@ -258,6 +352,7 @@ func (b *Broker) MetricsHandler(w http.ResponseWriter, _ *http.Request) {
 	defer b.mu.Unlock()
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	states := b.scheduler.QueueStates()
+	now := time.Now()
 	allocated := 0
 	for _, state := range states {
 		allocated += state.Share
@@ -266,10 +361,14 @@ func (b *Broker) MetricsHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprintf(w, "npu_share_capacity %d\n", logicalCapacity)
 	fmt.Fprintf(w, "npu_share_allocated_total %d\n", allocated)
 	fmt.Fprintf(w, "npu_share_available %d\n", logicalCapacity-allocated)
+	fmt.Fprintf(w, "npu_share_broker_info{epoch=\"%s\"} 1\n", b.epoch)
 	for _, state := range states {
 		id := strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(state.WorkloadID)
 		fmt.Fprintf(w, "npu_share_allocated{workload=\"%s\"} %d\n", id, state.Share)
 		fmt.Fprintf(w, "npu_share_queue_depth{workload=\"%s\"} %d\n", id, state.Queued)
+		current := b.sessions[state.WorkloadID]
+		fmt.Fprintf(w, "npu_share_session_last_seen_seconds{workload=\"%s\"} %.3f\n", id, float64(current.lastSeen.UnixNano())/1e9)
+		fmt.Fprintf(w, "npu_share_session_age_seconds{workload=\"%s\"} %.3f\n", id, now.Sub(current.lastSeen).Seconds())
 	}
 	for workloadID, grants := range b.grants {
 		id := strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(workloadID)

@@ -120,12 +120,15 @@ def snapshot(namespace, podresources_path):
         capacity = int(annotations.get("npu.snu-rtos.io/capacity", "1000"))
         physical = devices.get((metadata["namespace"], metadata["name"]), [])
         runtime = dispatcher_metrics(metadata["namespace"], metadata["name"])
+        epoch = next((labels.get("epoch", "-") for name, labels, _ in runtime
+                      if name == "npu_share_broker_info"), "-")
         dispatchers[npu_id] = {
             "id": npu_id, "pod": metadata["name"], "node": pod.get("spec", {}).get("nodeName", "-"),
             "physical_devices": physical, "capacity": capacity,
             "allocated": int(metric(runtime, "npu_share_allocated_total")),
             "available": int(metric(runtime, "npu_share_available", default=capacity)),
             "active_workloads": int(metric(runtime, "npu_share_active_workloads")),
+            "broker_epoch": epoch,
             "utilization": {device: utilization.get(device) for device in physical},
             "runtime_metrics": runtime,
         }
@@ -142,6 +145,7 @@ def snapshot(namespace, podresources_path):
         runtime = dispatchers.get(npu_id, {}).get("runtime_metrics", [])
         workload_id = metadata.get("uid", "")
         grants = int(metric(runtime, "npu_share_grants_total", "workload", workload_id))
+        session_age = metric(runtime, "npu_share_session_age_seconds", "workload", workload_id, default=-1)
         active = any(name == "npu_share_allocated" and labels.get("workload") == workload_id
                      for name, labels, _ in runtime)
         model_key = spec.get("model", {}).get("key") or os.path.basename(spec.get("model", {}).get("path", "-"))
@@ -153,6 +157,7 @@ def snapshot(namespace, podresources_path):
             "assigned_npu": npu_id, "physical_devices": physical,
             "allocated_share": status.get("allocatedShare", 0), "phase": status.get("phase", "Pending"),
             "runtime_active": active, "grants": grants, "model": model_key,
+            "session_age_seconds": session_age if session_age >= 0 else None,
             "model_utilization": model_metric.get("utilization"), "model_fps": model_metric.get("fps"),
             "reason": reason, "message": message,
         })
@@ -177,12 +182,12 @@ def render(data):
     print(f"NPU snapshot {data['timestamp']}  physical IDs: " +
           ("available" if data["podresources_available"] else "unavailable (build/run podresources as root)"))
     print("\nNPU POOLS")
-    print(f"{'NPU':<8} {'PHYSICAL':<18} {'NODE':<14} {'CAP':>5} {'ALLOC':>5} {'FREE':>5} {'ACTIVE':>6} {'UTIL':>8}")
+    print(f"{'NPU':<8} {'PHYSICAL':<18} {'NODE':<14} {'EPOCH':<10} {'CAP':>5} {'ALLOC':>5} {'FREE':>5} {'ACTIVE':>6} {'UTIL':>8}")
     for npu in data["npus"]:
         physical = ",".join(npu["physical_devices"]) or "-"
         values = [value for value in npu["utilization"].values() if value is not None]
         util = f"{sum(values)/len(values):.1f}%" if values else "-"
-        print(f"{npu['id']:<8} {short(physical,18):<18} {short(npu['node'],14):<14} {npu['capacity']:>5} {npu['allocated']:>5} {npu['available']:>5} {npu['active_workloads']:>6} {util:>8}")
+        print(f"{npu['id']:<8} {short(physical,18):<18} {short(npu['node'],14):<14} {short(npu['broker_epoch'],10):<10} {npu['capacity']:>5} {npu['allocated']:>5} {npu['available']:>5} {npu['active_workloads']:>6} {util:>8}")
     if data["device_utilization"]:
         print("\nMEASURED PHYSICAL DEVICE UTILIZATION")
         for device, value in sorted(data["device_utilization"].items()):
@@ -192,11 +197,12 @@ def render(data):
         for model, values in sorted(data["model_metrics"].items()):
             print(f"- {model}: utilization={values['utilization']:.1f}% fps={values['fps']:.1f}")
     print("\nWORKLOADS")
-    print(f"{'NAMESPACE/NAME':<30} {'POD':<22} {'MODE':<9} {'REQUEST':>10} {'NPU':<8} {'PHYSICAL':<16} {'PHASE':<10} {'USE':<12} {'REASON'}")
+    print(f"{'NAMESPACE/NAME':<30} {'POD':<22} {'MODE':<9} {'REQUEST':>10} {'NPU':<8} {'PHYSICAL':<16} {'PHASE':<10} {'USE':<12} {'SEEN':>7} {'REASON'}")
     for work in data["workloads"]:
         use = f"active/{work['grants']}" if work["runtime_active"] else (f"done/{work['grants']}" if work["grants"] else "-")
+        seen = f"{work['session_age_seconds']:.1f}s" if work["session_age_seconds"] is not None else "-"
         physical = ",".join(work["physical_devices"]) or "-"
-        print(f"{short(work['namespace']+'/'+work['name'],30):<30} {short(work['pod'],22):<22} {work['mode']:<9} {work['requested']:>10} {work['assigned_npu']:<8} {short(physical,16):<16} {work['phase']:<10} {use:<12} {work['reason']}")
+        print(f"{short(work['namespace']+'/'+work['name'],30):<30} {short(work['pod'],22):<22} {work['mode']:<9} {work['requested']:>10} {work['assigned_npu']:<8} {short(physical,16):<16} {work['phase']:<10} {use:<12} {seen:>7} {work['reason']}")
     if data["pending"]:
         print("\nPENDING REQUESTS")
         for work in data["pending"]:

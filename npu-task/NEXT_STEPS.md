@@ -10,16 +10,16 @@ and operational confidence before adding smarter placement algorithms.
 1. Exercise dispatcher restart while Service workloads are active. A client
    must restart, re-register, and receive new execution grants without manual
    intervention. `shared/realistic_scenario.py` now covers this path.
-2. Add dispatcher heartbeat/epoch to status. The controller currently discovers
-   ready dispatcher Pods and reconstructs allocation from client Pod annotations,
-   but it cannot state that a client is registered with the current broker epoch.
+2. Persist dispatcher epoch in control-plane status. Broker epoch, client
+   heartbeat/session age, and stale-session expiry are now exposed at runtime;
+   the controller does not yet copy the observed epoch into `NPUTask.status`.
 3. Make allocation creation atomic for future multi-replica controllers. The
    current single controller worker serializes reconciliation; leader election
    prevents two active controller processes. A durable Allocation CR or compare
    and swap ledger is required before enabling concurrent reconcile workers.
-4. Define stale-client cleanup explicitly. The broker has an execution-token
-   timeout, while registration cleanup relies on client `UNREGISTER` or broker
-   restart. Add session leases if clients can disappear without cleanup.
+4. Authenticate session heartbeats. The broker now expires a registration after
+   45 seconds without commands or heartbeat, but workload identity is still
+   trusted from the local socket protocol.
 5. Define Batch retry/checkpoint semantics. A dispatcher loss during one
    inference surfaces the Batch as Failed; only Service mode is automatically
    restarted today. Production jobs need an explicit at-least-once policy or

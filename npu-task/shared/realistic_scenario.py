@@ -134,6 +134,13 @@ def main():
         if len(before["pending"]) != 1 or before["pending"][0]["name"] != "urgent-detection":
             raise RuntimeError("monitor did not expose the urgent pending request")
         result["checks"].append("pending-visible-with-reason")
+        epoch_before = next(npu["broker_epoch"] for npu in before["npus"] if npu["id"] == "npu-0")
+        if epoch_before == "-":
+            raise RuntimeError("npu-0 broker epoch is not observable")
+        active_ages = [work["session_age_seconds"] for work in before["workloads"] if work["runtime_active"]]
+        if not active_ages or any(age is None or age > 15 for age in active_ages):
+            raise RuntimeError(f"heartbeat session ages are stale: {active_ages}")
+        result["checks"].append("broker-epoch-and-fresh-heartbeats-visible")
 
         kubectl("patch", "nputask", "classification-service", "-n", NAMESPACE,
                 "--type=merge", "-p", '{"spec":{"suspend":true}}')
@@ -168,6 +175,13 @@ def main():
             raise RuntimeError("camera service did not restart, re-register, and resume grants")
         result["checks"].append(f"dispatcher-recovery:restart-count>{before_restarts}:grants={recovered_grants}")
         final = snapshot("dispatcher-restarted-and-service-recovered", result)
+        epoch_after = next(npu["broker_epoch"] for npu in final["npus"] if npu["id"] == "npu-0")
+        if epoch_after == epoch_before:
+            raise RuntimeError("dispatcher restart did not change broker epoch")
+        camera_state = next(work for work in final["workloads"] if work["name"] == "camera-service")
+        if camera_state["session_age_seconds"] is None or camera_state["session_age_seconds"] > 15:
+            raise RuntimeError(f"recovered camera heartbeat is stale: {camera_state['session_age_seconds']}")
+        result["checks"].append(f"broker-epoch-changed:{epoch_before}->{epoch_after}")
         failed = [work["name"] for work in final["workloads"] if work["phase"] == "Failed"]
         if failed:
             raise RuntimeError(f"unexpected failed workloads after recovery: {failed}")
