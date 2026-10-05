@@ -3,6 +3,11 @@
 
 # Execution Guide
 
+For a camera-free, side-by-side image replay viewer (including a no-NPU mock
+mode), see [image-stream/README.md](image-stream/README.md). The current
+architecture, resource model, lifecycle, and validation boundaries are described
+in [SYSTEM_MODEL.md](SYSTEM_MODEL.md).
+
 For managed start/suspend/resume/resize and multi-model NPU tasks, see the
 [NPU task framework](npu-task/README.md). To reproduce the complete build,
 deployment, lifecycle, recovery, and cleanup procedure, use the
