@@ -1,0 +1,5 @@
+[
+  {"path":"models/yolov8n_seg.hef","url":"https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/ModelZoo/Compiled/v2.15.0/hailo8/yolov8n_seg.hef","sha256":"67e6336f39f1e2a5d48cc6560ad14c669a71243d57baa9238f0058ee743f80ba"},
+  {"path":"models/yolov8s_pose.hef","url":"https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/ModelZoo/Compiled/v2.15.0/hailo8/yolov8s_pose.hef","sha256":"e19856699ed47cf866d23265827f960b263f287dab5e54e82c7ce37e12525a2d"},
+  {"path":"assets/people.jpg","url":"https://upload.wikimedia.org/wikipedia/commons/e/e3/People_in_the_street_%2850361925813%29.jpg","sha256":"e5e7b594c7ed7e6ebe40fe730e136c15e373c521295e6aeff804c54b51ce7975"}
+]

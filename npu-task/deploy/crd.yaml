@@ -49,6 +49,16 @@ spec:
             - command
             - model
             properties:
+              visual:
+                type: object
+                required: [session, nodeName]
+                properties:
+                  session:
+                    type: string
+                    pattern: "^[a-z0-9][a-z0-9-]{0,39}$"
+                  nodeName:
+                    type: string
+                    minLength: 1
               image:
                 type: string
                 minLength: 1
@@ -79,8 +89,8 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                 x-kubernetes-validations:
-                - rule: self.all(e, e.name != 'NPU_COUNT' && e.name != 'MODEL_PATH')
-                  message: NPU_COUNT and MODEL_PATH are reserved
+                - rule: self.all(e, !(e.name in ['NPU_COUNT', 'NPU_SHARE', 'MODEL_PATH', 'HAILORT_SERVICE_ADDRESS', 'NPU_SCHEDULER_ADDRESS', 'NPU_WORKLOAD_ID']) && !e.name.startsWith('OSH_VISION_'))
+                  message: Runtime allocation and OSH_VISION_ environment variables are reserved
               resources:
                 type: object
                 properties:
@@ -133,6 +143,8 @@ spec:
                 - Service
                 default: Batch
             x-kubernetes-validations:
+            - rule: '!has(self.visual) || (has(self.npuCount) && self.npuCount == 1 && (!has(self.npuShare) || self.npuShare == 0))'
+              message: Visual tasks require one exclusive NPU
             - rule: '(has(self.npuCount) && self.npuCount > 0) != (has(self.npuShare) && self.npuShare > 0)'
               message: Exactly one of npuCount or npuShare must be greater than zero
           status:

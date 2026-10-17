@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
@@ -55,8 +56,16 @@ func Validate(s api.NPUTaskSpec) error {
 	if s.Model.PVC != "" && (!path.IsAbs(s.Model.MountPath) || s.Model.MountPath == "/" || !strings.HasPrefix(path.Clean(s.Model.Path), path.Clean(s.Model.MountPath)+"/")) {
 		return fmt.Errorf("PVC model.path must be inside an absolute, non-root model.mountPath")
 	}
+	if s.Visual != nil {
+		if !regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,39}$`).MatchString(s.Visual.Session) || s.Visual.NodeName == "" {
+			return fmt.Errorf("visual requires a safe session name (1-40 lowercase letters, digits, hyphens) and nodeName")
+		}
+		if s.NPUCount != 1 || s.NPUShare != 0 {
+			return fmt.Errorf("visual tasks require one exclusive NPU")
+		}
+	}
 	for _, e := range s.Env {
-		if e.Name == "NPU_COUNT" || e.Name == "NPU_SHARE" || e.Name == "MODEL_PATH" || e.Name == "HAILORT_SERVICE_ADDRESS" || e.Name == "NPU_SCHEDULER_ADDRESS" || e.Name == "NPU_WORKLOAD_ID" {
+		if strings.HasPrefix(e.Name, "OSH_VISION_") || e.Name == "NPU_COUNT" || e.Name == "NPU_SHARE" || e.Name == "MODEL_PATH" || e.Name == "HAILORT_SERVICE_ADDRESS" || e.Name == "NPU_SCHEDULER_ADDRESS" || e.Name == "NPU_WORKLOAD_ID" {
 			return fmt.Errorf("%s is reserved", e.Name)
 		}
 	}
@@ -123,12 +132,19 @@ func desiredPod(t *api.NPUTask, scheme *runtime.Scheme, allocation *resource.All
 		Spec: corev1.PodSpec{RestartPolicy: corev1.RestartPolicyNever, TerminationGracePeriodSeconds: &grace, AutomountServiceAccountToken: &automount,
 			Containers: []corev1.Container{{Name: "inference", Image: t.Spec.Image, ImagePullPolicy: corev1.PullIfNotPresent,
 				Command: append([]string(nil), t.Spec.Command...), Args: append([]string(nil), t.Spec.Args...), Env: env, Resources: resources}}}}
+	if t.Spec.Visual != nil {
+		p.Labels["npu.snu-rtos.io/visual-session"] = t.Spec.Visual.Session
+		p.Spec.NodeSelector = map[string]string{"kubernetes.io/hostname": t.Spec.Visual.NodeName}
+		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "vision-session", VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: "/data/osh-vision/" + t.Spec.Visual.Session, Type: hostPathTypePtr(corev1.HostPathDirectoryOrCreate)}}})
+		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "vision-session", MountPath: "/run/osh-vision"})
+		p.Spec.Containers[0].Env = append(p.Spec.Containers[0].Env, corev1.EnvVar{Name: "OSH_VISION_SOCKET", Value: "/run/osh-vision/hub.sock"}, corev1.EnvVar{Name: "OSH_VISION_TASK", Value: t.Namespace + "/" + t.Name}, corev1.EnvVar{Name: "OSH_VISION_UID", Value: string(t.UID)})
+	}
 	if t.Spec.Mode == "Service" {
 		p.Spec.RestartPolicy = corev1.RestartPolicyAlways
 	}
 	if t.Spec.Model.PVC != "" {
-		p.Spec.Volumes = []corev1.Volume{{Name: "model", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: t.Spec.Model.PVC, ReadOnly: true}}}}
-		p.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{{Name: "model", MountPath: t.Spec.Model.MountPath, ReadOnly: true}}
+		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "model", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: t.Spec.Model.PVC, ReadOnly: true}}})
+		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "model", MountPath: t.Spec.Model.MountPath, ReadOnly: true})
 	}
 	if t.Spec.NPUShare > 0 {
 		p.Spec.NodeName = state.NodeName

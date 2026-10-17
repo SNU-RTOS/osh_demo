@@ -16,3 +16,8 @@ if(OSH_BUILD_INFERENCE)
     add_subdirectory(inference)
 endif()
 add_subdirectory(image-stream)
+
+option(OSH_BUILD_VISION "Build multi-container replay, model adapters, and OpenGL viewer" OFF)
+if(OSH_BUILD_VISION)
+    add_subdirectory(vision)
+endif()

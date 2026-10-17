@@ -1,0 +1,11 @@
+# package_sdk.py produces this dependency closure from the pinned SDK.
+FROM scratch AS runtime
+COPY build/runtime/ /
+ENV LD_LIBRARY_PATH=/lib
+ENTRYPOINT ["/app/vision_worker"]
+FROM runtime AS detection
+COPY build/models/yolov10s.hef /models/yolov10s.hef
+FROM runtime AS segmentation
+COPY models/yolov8n_seg.hef /models/yolov8n_seg.hef
+FROM runtime AS pose
+COPY models/yolov8s_pose.hef /models/yolov8s_pose.hef

@@ -2,8 +2,10 @@
 
 This describes the implemented system at baseline commit `f09c5c4`, plus the
 camera-free image replay harness. It is a working model for deciding changes,
-tests, and evaluation scope. The visual application path and the managed shared
-execution path are currently separate integrations.
+tests, and evaluation scope. The legacy visual application path and the managed shared
+execution path remain separate integrations. The new [multi-container vision
+framework](vision/README.md) joins managed **exclusive** tasks to prerecorded
+input and native OpenGL display; shared visual execution is still deferred.
 
 ## Components and boundaries
 
@@ -157,3 +159,25 @@ concurrent controllers, explicit Batch retry/checkpoint semantics, multi-node
 validation, scoped transport mounts/credentials, dashboards, and upgrade policy.
 See [NEXT_STEPS.md](npu-task/NEXT_STEPS.md) and
 [MEASUREMENT_GUIDE.md](npu-task/MEASUREMENT_GUIDE.md).
+
+## Multi-container prerecorded vision
+
+`vision/` adds three one-model/one-NPU Service containers (YOLOv10s detection,
+YOLOv8n instance segmentation, YOLOv8s pose). An optional `spec.visual` selects
+a node-local session and mounts its Unix socket directory. A native source/viewer
+feeds bounded independent queues, preserves exact result/source identity, and
+returns GPU completion acknowledgments to each container. Typed masks and
+keypoints use a new transport, leaving camera protocol version 2 unchanged.
+
+The native SDL/OpenGL viewer was verified on the NVIDIA RTX A4500 Embedded GPU
+using GLVND and the existing host NVIDIA libraries. The host's legacy `glxinfo`
+can still report Mesa softpipe; acceptance checks the viewer's actual renderer.
+No host graphics configuration was changed. The first five frames per worker
+connection are tagged warmup. End-to-end timing ends at GL completion before
+swap, not physical scanout. Headless results explicitly omit GPU timings.
+
+On this device the full root disk initially blocked Docker RUN and Kubernetes
+CNI writes. Build/test work used a temporary SDK; the VS Code C++ cache was
+relocated, preserving all files, from `/home/root/.cache/vscode-cpptools` to
+`/data/osh-vision/host-cache/vscode-cpptools` with a symlink at the original path.
+Root-disk capacity remains an operational constraint.

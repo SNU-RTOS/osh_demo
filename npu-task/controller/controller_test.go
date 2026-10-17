@@ -314,3 +314,58 @@ func TestMetricsCollectorReportsOperationalState(t *testing.T) {
 		}
 	}
 }
+
+func TestVisualSessionMountAndIsolation(t *testing.T) {
+	r, task := fixture(t)
+	task.Spec.NPUCount = 1
+	task.Spec.Visual = &api.VisualSession{Session: "demo", NodeName: "ava"}
+	task.Spec.Model = api.Model{Path: "/models/m.hef", PVC: "models", MountPath: "/models"}
+	if err := Validate(task.Spec); err != nil {
+		t.Fatal(err)
+	}
+	updateTask(t, r, task)
+	reconcile(t, r, task)
+	p := getPod(t, r, task)
+	if p.Spec.NodeSelector["kubernetes.io/hostname"] != "ava" || len(p.Spec.Volumes) != 2 || len(p.Spec.Containers[0].VolumeMounts) != 2 {
+		t.Fatalf("visual/PVC mounts or placement missing: %#v", p.Spec)
+	}
+	if p.Spec.Volumes[0].HostPath.Path != "/data/osh-vision/demo" {
+		t.Fatal(p.Spec.Volumes)
+	}
+	found := false
+	for _, e := range p.Spec.Containers[0].Env {
+		if e.Name == "OSH_VISION_TASK" && e.Value == "default/test" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("task identity missing")
+	}
+	copy := task.DeepCopy()
+	copy.Spec.Visual.Session = "other"
+	if task.Spec.Visual.Session != "demo" {
+		t.Fatal("visual deepcopy aliases")
+	}
+	old := executionHash(task.Spec)
+	task.Spec.Visual.Session = "new"
+	if old == executionHash(task.Spec) {
+		t.Fatal("visual change must replace pod")
+	}
+	for _, session := range []string{"../escape", "", "demo/other"} {
+		task.Spec.Visual.Session = session
+		if Validate(task.Spec) == nil {
+			t.Fatalf("accepted unsafe session %q", session)
+		}
+	}
+	task.Spec.Visual.Session = "demo"
+	task.Spec.Env = []corev1.EnvVar{{Name: "OSH_VISION_SOCKET", Value: "override"}}
+	if Validate(task.Spec) == nil {
+		t.Fatal("reserved visual env accepted")
+	}
+	task.Spec.Env = nil
+	task.Spec.NPUCount = 0
+	task.Spec.NPUShare = 500
+	if Validate(task.Spec) == nil {
+		t.Fatal("shared visual task accepted")
+	}
+}

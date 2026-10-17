@@ -18,7 +18,13 @@ type Model struct {
 	MountPath string `json:"mountPath,omitempty"`
 }
 
+type VisualSession struct {
+	Session  string `json:"session"`
+	NodeName string `json:"nodeName"`
+}
+
 type NPUTaskSpec struct {
+	Visual    *VisualSession              `json:"visual,omitempty"`
 	Image     string                      `json:"image"`
 	Command   []string                    `json:"command"`
 	Args      []string                    `json:"args,omitempty"`
@@ -66,6 +72,10 @@ func (in *NPUTask) DeepCopy() *NPUTask {
 	out := new(NPUTask)
 	*out = *in
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	if in.Spec.Visual != nil {
+		v := *in.Spec.Visual
+		out.Spec.Visual = &v
+	}
 	out.Spec.Command = append([]string(nil), in.Spec.Command...)
 	out.Spec.Args = append([]string(nil), in.Spec.Args...)
 	out.Spec.Env = make([]corev1.EnvVar, len(in.Spec.Env))
