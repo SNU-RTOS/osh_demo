@@ -33,8 +33,10 @@ and operational confidence before adding smarter placement algorithms.
    bounded histogram buckets after collecting representative device traces.
 3. Profile model load/residency cost. Repeated model configuration currently
    affects latency and should inform a later ModelAware policy.
-4. Add controlled oversubscription only after admission and measured utilization
-   remain clearly separate in APIs and dashboards.
+4. Profiled best-effort admission and restart-based policy switching are now
+   implemented; see `ADMISSION.md`. Collect real model profiles and validate
+   co-running clients before enabling it. Broker-enforced FPS caps and SLO-aware
+   interference management remain future work.
 
 ## P1 — observability and identity
 

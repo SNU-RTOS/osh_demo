@@ -140,6 +140,8 @@ def snapshot(namespace, podresources_path):
             "available": int(metric(runtime, "npu_share_available", default=capacity)),
             "active_workloads": int(metric(runtime, "npu_share_active_workloads")),
             "broker_epoch": epoch,
+            "broker_occupancy_units": metric(runtime, "npu_broker_occupancy_units", default=None),
+            "broker_observation_window_seconds": metric(runtime, "npu_broker_observation_window_seconds", default=None),
             "utilization": {device: utilization.get(device) for device in physical},
             "runtime_metrics": runtime,
         }
@@ -149,7 +151,7 @@ def snapshot(namespace, podresources_path):
     for task in tasks:
         metadata, spec, status = task["metadata"], task.get("spec", {}), task.get("status", {})
         reason, message = condition(task)
-        shared = bool(spec.get("npuShare"))
+        shared = bool(spec.get("npuShare") or spec.get("bestEffort"))
         npu_id, pod_name = status.get("npuID", "-"), status.get("podName", "-")
         physical = devices.get((metadata["namespace"], pod_name), [])
         if shared and not physical:
@@ -171,7 +173,12 @@ def snapshot(namespace, podresources_path):
         workloads.append({
             "namespace": metadata["namespace"], "name": metadata["name"], "pod": pod_name,
             "mode": "shared" if shared else "exclusive",
-            "requested": f"{spec.get('npuShare')} share" if shared else f"{spec.get('npuCount', 0)} NPU",
+            "requested": (f"{spec['bestEffort']['targetFPS']} FPS" if spec.get('bestEffort') else
+                          f"{spec.get('npuShare')} share" if shared else f"{spec.get('npuCount', 0)} NPU"),
+            "admission_policy": status.get("admissionPolicy"),
+            "admission_fingerprint": status.get("admissionFingerprint"),
+            "reserved_demand": status.get("reservedDemand", status.get("allocatedShare", 0)),
+            "execution_weight": status.get("executionWeight", spec.get("npuShare", 0)),
             "assigned_npu": npu_id, "physical_devices": physical,
             "allocated_share": status.get("allocatedShare", 0), "phase": status.get("phase", "Pending"),
             "runtime_active": active, "grants": grants, "model": model_key,
@@ -186,11 +193,15 @@ def snapshot(namespace, podresources_path):
             "reason": reason, "message": message,
         })
     for npu in dispatchers.values():
-        reserved = sum(work["allocated_share"] for work in workloads
-                       if work["assigned_npu"] == npu["id"] and
-                       work["phase"] not in ("Succeeded", "Failed", "Suspended"))
+        # Inventory remains cluster-wide even when displayed tasks are namespace-filtered.
+        reserved = sum(int(pod["metadata"].get("annotations", {}).get("npu.snu-rtos.io/allocated-share", "0"))
+                       for pod in pods if
+                       pod["metadata"].get("annotations", {}).get("npu.snu-rtos.io/assigned-npu") == npu["id"] and
+                       (pod["metadata"].get("deletionTimestamp") or
+                        pod.get("status", {}).get("phase") not in ("Succeeded", "Failed")))
         npu["allocated"] = reserved
         npu["available"] = max(0, npu["capacity"] - reserved)
+        npu["admission_load_units"] = max(reserved, npu["broker_occupancy_units"] or 0)
     return {"timestamp": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
             "podresources_available": bool(devices), "npus": list(dispatchers.values()),
             "device_utilization": utilization, "model_metrics": models,
@@ -232,7 +243,14 @@ def render(data):
         for work in data["pending"]:
             duration = f" for {work['pending_duration_seconds']:.1f}s" if work["pending_duration_seconds"] is not None else ""
             print(f"- {work['namespace']}/{work['name']}: {work['requested']}{duration} — {work['reason']}: {work['message']}")
-    print("\nMeasured utilization is observation; requested/allocated share is admission weight, not a throughput guarantee.")
+    print("\nSHARED ADMISSION")
+    for npu in data["npus"]:
+        busy = npu.get("broker_occupancy_units")
+        print(f"- {npu['id']}: broker occupancy={busy if busy is not None else 'unavailable'} units; admission load={npu.get('admission_load_units', 'unavailable')}")
+    for work in data["workloads"]:
+        if work.get("admission_policy"):
+            print(f"- {work['namespace']}/{work['name']}: policy={work['admission_policy']} reserved={work['reserved_demand']} weight={work['execution_weight']}")
+    print("\nHardware utilization and broker occupancy are observations; reserved demand and execution weight are separate. No throughput guarantee.")
 
 
 def main():

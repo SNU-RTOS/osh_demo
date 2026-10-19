@@ -67,6 +67,15 @@ subjects:
     name: npu-task-controller
     namespace: npu-task-system
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: npu-admission-config
+  namespace: npu-task-system
+data:
+  admission.json: |
+    {"sharedAdmissionPolicy":"static-share","budget":800,"profileMargin":1.2,"profiles":{}}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -81,10 +90,16 @@ spec:
       labels: {app: npu-task-controller}
     spec:
       serviceAccountName: npu-task-controller
+      volumes:
+        - name: admission-config
+          configMap: {name: npu-admission-config}
       containers:
         - name: controller
           image: npu-task-controller:m1
           imagePullPolicy: IfNotPresent
+          args: ["--admission-config=/etc/npu-admission/admission.json"]
+          volumeMounts:
+            - {name: admission-config, mountPath: /etc/npu-admission, readOnly: true}
           env:
             - name: POD_NAMESPACE
               valueFrom:

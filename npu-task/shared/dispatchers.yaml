@@ -15,6 +15,8 @@ spec:
         npu.snu-rtos.io/component: dispatcher
       annotations:
         npu.snu-rtos.io/dispatcher-id: npu-0
+        npu.snu-rtos.io/device-architecture: HAILO8
+        npu.snu-rtos.io/runtime-version: "4.21.0"
         npu.snu-rtos.io/dispatcher-endpoint: unix:///tmp/npu-share-0.sock
         npu.snu-rtos.io/scheduler-endpoint: unix:///tmp/npu-share-0-scheduler.sock
         npu.snu-rtos.io/capacity: "1000"
@@ -71,6 +73,8 @@ spec:
         npu.snu-rtos.io/component: dispatcher
       annotations:
         npu.snu-rtos.io/dispatcher-id: npu-1
+        npu.snu-rtos.io/device-architecture: HAILO8
+        npu.snu-rtos.io/runtime-version: "4.21.0"
         npu.snu-rtos.io/dispatcher-endpoint: unix:///tmp/npu-share-1.sock
         npu.snu-rtos.io/scheduler-endpoint: unix:///tmp/npu-share-1-scheduler.sock
         npu.snu-rtos.io/capacity: "1000"

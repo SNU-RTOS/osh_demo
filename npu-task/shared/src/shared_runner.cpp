@@ -21,6 +21,10 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <fstream>
+#include <cmath>
+#include <sys/wait.h>
+#include "pacing.hpp"
 
 using namespace hailort;
 
@@ -131,22 +135,62 @@ int main(int argc, char **argv)
     std::signal(SIGTERM, stop_handler);
     std::string hef;
     uint64_t runs = 100;
+    uint64_t warmup = 0;
+    std::string profile_output;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--hef" && ++i < argc) hef = argv[i];
         else if (arg == "--runs" && ++i < argc) runs = std::stoull(argv[i]);
+        else if (arg == "--warmup" && ++i < argc) warmup = std::stoull(argv[i]);
+        else if (arg == "--profile-json" && ++i < argc) profile_output = argv[i];
         else { std::cerr << "usage: shared_runner --hef MODEL.hef [--runs N]\n"; return 2; }
     }
     const char *scheduler = std::getenv("NPU_SCHEDULER_ADDRESS");
     const char *workload = std::getenv("NPU_WORKLOAD_ID");
     const char *share = std::getenv("NPU_SHARE");
     const bool shared = scheduler && workload && share;
+    double target_fps = 0;
+    if (const char *raw = std::getenv("NPU_TARGET_FPS")) {
+        char *end = nullptr;
+        target_fps = std::strtod(raw, &end);
+        if (end == raw || *end || !std::isfinite(target_fps) || target_fps <= 0 || target_fps > 1000000) {
+            std::cerr << "NPU_TARGET_FPS must be positive and <=1000000\n"; return 2;
+        }
+    }
+    if (shared && (warmup || !profile_output.empty())) {
+        std::cerr << "Profiling requires exclusive execution\n"; return 2;
+    }
     if (hef.empty() || runs == 0 || ((scheduler || workload || share) && !shared)) {
         std::cerr << "invalid model or partial scheduler allocation environment\n";
         return 2;
     }
+    // Verify best-effort model identity without invoking a shell.
+    if (const char *expected = std::getenv("NPU_MODEL_SHA256")) {
+        int fds[2];
+        if (pipe(fds) != 0) return 2;
+        pid_t child = fork();
+        if (child == 0) {
+            dup2(fds[1], STDOUT_FILENO); close(fds[0]); close(fds[1]);
+            execlp("sha256sum", "sha256sum", "--", hef.c_str(), static_cast<char *>(nullptr));
+            _exit(127);
+        }
+        close(fds[1]);
+        char digest[64]; size_t got = 0;
+        while (got < sizeof(digest)) { auto n=read(fds[0],digest+got,sizeof(digest)-got); if(n<=0)break;got+=n; }
+        close(fds[0]); int status = 0;
+        if (child < 0 || waitpid(child,&status,0) < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0 || got != 64 || std::string(digest,64) != expected) {
+            std::cerr << "Model checksum verification failed\n"; return 2;
+        }
+    }
     std::string register_reply;
-    if (shared && !scheduler_command(scheduler, std::string("REGISTER ") + workload + " " + share, &register_reply)) return 3;
+    std::string registration_command;
+    if (shared) {
+        registration_command=std::string("REGISTER ")+workload+" "+share;
+        if(const char* demand=std::getenv("NPU_RESERVED_DEMAND")) {
+            registration_command+=" "+std::string(demand)+" utilization-best-effort";
+        }
+        if (!scheduler_command(scheduler,registration_command,&register_reply)) return 3;
+    }
     if (shared) std::cout << "NPU_BROKER_EPOCH " << register_reply.substr(3) << std::flush;
     RegistrationGuard registration(scheduler, workload, shared);
 
@@ -191,13 +235,25 @@ int main(int argc, char **argv)
     uint64_t latency_sum_us = 0;
     std::vector<uint64_t> latencies;
     latencies.reserve(runs);
+    for(uint64_t i=0;i<warmup && !stop_requested.load();++i) {
+        if (!require_status(configured.run(bindings,std::chrono::seconds(30)),"warmup")) return 12;
+    }
+    FramePacer pacer(target_fps);
     const auto started = std::chrono::steady_clock::now();
-    if (shared && !scheduler_command(scheduler, std::string("ACQUIRE ") + workload)) return 11;
+    if (shared && target_fps == 0 && !scheduler_command(scheduler, std::string("ACQUIRE ") + workload)) return 11;
     for (uint64_t i = 0; i < runs && !stop_requested.load(); ++i) {
+        if (target_fps > 0) {
+            const auto deadline = pacer.deadline(std::chrono::steady_clock::now());
+            while (!stop_requested.load() && std::chrono::steady_clock::now() < deadline)
+                std::this_thread::sleep_until(std::min(deadline,std::chrono::steady_clock::now()+std::chrono::milliseconds(10)));
+            if (stop_requested.load()) break;
+            pacer.started(std::chrono::steady_clock::now());
+            if (shared && !scheduler_command(scheduler,std::string("ACQUIRE ")+workload)) return 11;
+        }
         const auto begin = std::chrono::steady_clock::now();
         if (!require_status(configured.run(bindings, std::chrono::seconds(30)), "inference")) return 12;
         if (shared) {
-            const auto command = ((i + 1) < runs && !stop_requested.load()) ? "NEXT " : "COMPLETE ";
+            const auto command = (target_fps == 0 && (i + 1) < runs && !stop_requested.load()) ? "NEXT " : "COMPLETE ";
             if (!scheduler_command(scheduler, std::string(command) + workload)) return 13;
         }
         const auto latency = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - begin).count();
@@ -211,6 +267,14 @@ int main(int argc, char **argv)
     std::sort(latencies.begin(), latencies.end());
     const auto p95_latency_us = latencies[(latencies.size() * 95 + 99) / 100 - 1];
     const auto average_latency_us = latency_sum_us / latencies.size();
+    if (!profile_output.empty()) {
+        if (stop_requested.load() || latencies.size() != runs) return 16;
+        std::ofstream file(profile_output);
+        file << "{\"samples\":" << latencies.size() << ",\"warmup\":" << warmup
+             << ",\"meanSeconds\":" << (static_cast<double>(latency_sum_us)/latencies.size()/1e6)
+             << ",\"p95Seconds\":" << p95_latency_us/1e6 << "}\n";
+        if (!file) return 16;
+    }
     const auto throughput_fps = (static_cast<double>(latencies.size()) * 1000000.0) / static_cast<double>(elapsed_us);
     std::cout << "NPU_E2E_OK mode=" << (shared ? "shared" : "exclusive")
               << " workload=" << (shared ? workload : "direct") << " share=" << (shared ? share : "1000")

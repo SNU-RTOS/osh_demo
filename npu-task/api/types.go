@@ -12,6 +12,7 @@ var GroupVersion = schema.GroupVersion{Group: "npu.snu-rtos.io", Version: "v1alp
 const ResourceName corev1.ResourceName = "hailo.ai/npu"
 
 type Model struct {
+	SHA256    string `json:"sha256,omitempty"`
 	Path      string `json:"path"`
 	Key       string `json:"key,omitempty"`
 	PVC       string `json:"pvc,omitempty"`
@@ -24,29 +25,51 @@ type VisualSession struct {
 }
 
 type NPUTaskSpec struct {
-	Visual    *VisualSession              `json:"visual,omitempty"`
-	Image     string                      `json:"image"`
-	Command   []string                    `json:"command"`
-	Args      []string                    `json:"args,omitempty"`
-	Env       []corev1.EnvVar             `json:"env,omitempty"`
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-	Model     Model                       `json:"model"`
-	NPUCount  int32                       `json:"npuCount,omitempty"`
-	NPUShare  int32                       `json:"npuShare,omitempty"`
-	Suspend   bool                        `json:"suspend,omitempty"`
-	Mode      string                      `json:"mode,omitempty"`
+	BestEffort *BestEffortRequest          `json:"bestEffort,omitempty"`
+	Visual     *VisualSession              `json:"visual,omitempty"`
+	Image      string                      `json:"image"`
+	Command    []string                    `json:"command"`
+	Args       []string                    `json:"args,omitempty"`
+	Env        []corev1.EnvVar             `json:"env,omitempty"`
+	Resources  corev1.ResourceRequirements `json:"resources,omitempty"`
+	Model      Model                       `json:"model"`
+	NPUCount   int32                       `json:"npuCount,omitempty"`
+	NPUShare   int32                       `json:"npuShare,omitempty"`
+	Suspend    bool                        `json:"suspend,omitempty"`
+	Mode       string                      `json:"mode,omitempty"`
+}
+
+type BestEffortRequest struct {
+	TargetFPS float64 `json:"targetFPS"`
+	Weight    int32   `json:"weight,omitempty"`
+}
+
+func (s NPUTaskSpec) Shared() bool { return s.NPUShare > 0 || s.BestEffort != nil }
+func (s NPUTaskSpec) Weight() int32 {
+	if s.BestEffort == nil {
+		return s.NPUShare
+	}
+	if s.BestEffort.Weight == 0 {
+		return 100
+	}
+	return s.BestEffort.Weight
 }
 
 type NPUTaskStatus struct {
-	ObservedGeneration int64        `json:"observedGeneration,omitempty"`
-	PodName            string       `json:"podName,omitempty"`
-	NodeName           string       `json:"nodeName,omitempty"`
-	NPUID              string       `json:"npuID,omitempty"`
-	DispatcherEndpoint string       `json:"dispatcherEndpoint,omitempty"`
-	AllocatedShare     int32        `json:"allocatedShare,omitempty"`
-	BrokerEpoch        string       `json:"brokerEpoch,omitempty"`
-	AllocationTime     *metav1.Time `json:"allocationTime,omitempty"`
-	Phase              string       `json:"phase,omitempty"`
+	AdmissionPolicy      string       `json:"admissionPolicy,omitempty"`
+	AdmissionFingerprint string       `json:"admissionFingerprint,omitempty"`
+	ProfileRevision      string       `json:"profileRevision,omitempty"`
+	ReservedDemand       int32        `json:"reservedDemand,omitempty"`
+	ExecutionWeight      int32        `json:"executionWeight,omitempty"`
+	ObservedGeneration   int64        `json:"observedGeneration,omitempty"`
+	PodName              string       `json:"podName,omitempty"`
+	NodeName             string       `json:"nodeName,omitempty"`
+	NPUID                string       `json:"npuID,omitempty"`
+	DispatcherEndpoint   string       `json:"dispatcherEndpoint,omitempty"`
+	AllocatedShare       int32        `json:"allocatedShare,omitempty"`
+	BrokerEpoch          string       `json:"brokerEpoch,omitempty"`
+	AllocationTime       *metav1.Time `json:"allocationTime,omitempty"`
+	Phase                string       `json:"phase,omitempty"`
 	// ExecutionHash makes terminal batch results durable across pod garbage collection.
 	ExecutionHash string             `json:"executionHash,omitempty"`
 	Conditions    []metav1.Condition `json:"conditions,omitempty"`
@@ -71,6 +94,10 @@ func (in *NPUTask) DeepCopy() *NPUTask {
 	}
 	out := new(NPUTask)
 	*out = *in
+	if in.Spec.BestEffort != nil {
+		v := *in.Spec.BestEffort
+		out.Spec.BestEffort = &v
+	}
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	if in.Spec.Visual != nil {
 		v := *in.Spec.Visual

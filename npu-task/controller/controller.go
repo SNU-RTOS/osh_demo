@@ -5,12 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"math"
 	"path"
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/SNU-RTOS/osh_demo/npu-task/admission"
 	api "github.com/SNU-RTOS/osh_demo/npu-task/api"
 	"github.com/SNU-RTOS/osh_demo/npu-task/resource"
 	"github.com/SNU-RTOS/osh_demo/npu-task/sharing"
@@ -30,13 +33,39 @@ const brokerEpochKey = "npu.snu-rtos.io/broker-epoch"
 
 type Reconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Registry sharing.Registry
+	Scheme      *runtime.Scheme
+	Registry    sharing.Registry
+	APIReader   client.Reader
+	Admission   *admission.Config
+	admissionMu sync.Mutex
+}
+
+func (r *Reconciler) admissionConfig() admission.Config {
+	if r.Admission == nil {
+		return admission.Default()
+	}
+	return *r.Admission
 }
 
 func Validate(s api.NPUTaskSpec) error {
-	if (s.NPUCount == 0) == (s.NPUShare == 0) {
-		return fmt.Errorf("exactly one of npuCount or npuShare is required")
+	choices := 0
+	if s.NPUCount > 0 {
+		choices++
+	}
+	if s.NPUShare > 0 {
+		choices++
+	}
+	if s.BestEffort != nil {
+		choices++
+	}
+	if choices != 1 {
+		return fmt.Errorf("exactly one of npuCount, npuShare or bestEffort is required")
+	}
+	if s.BestEffort != nil {
+		b := s.BestEffort
+		if math.IsNaN(b.TargetFPS) || math.IsInf(b.TargetFPS, 0) || b.TargetFPS <= 0 || b.TargetFPS > 1000000 || b.Weight < 0 || b.Weight > 1000 || s.Model.Key == "" || !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(s.Model.SHA256) {
+			return fmt.Errorf("bestEffort requires positive targetFPS, weight 1–1000, model.key and lowercase model.sha256")
+		}
 	}
 	if s.NPUCount < 0 || s.NPUCount > 8 {
 		return fmt.Errorf("npuCount must be between 1 and 8 when used")
@@ -60,12 +89,12 @@ func Validate(s api.NPUTaskSpec) error {
 		if !regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,39}$`).MatchString(s.Visual.Session) || s.Visual.NodeName == "" {
 			return fmt.Errorf("visual requires a safe session name (1-40 lowercase letters, digits, hyphens) and nodeName")
 		}
-		if s.NPUCount != 1 || s.NPUShare != 0 {
+		if s.NPUCount != 1 || s.Shared() {
 			return fmt.Errorf("visual tasks require one exclusive NPU")
 		}
 	}
 	for _, e := range s.Env {
-		if strings.HasPrefix(e.Name, "OSH_VISION_") || e.Name == "NPU_COUNT" || e.Name == "NPU_SHARE" || e.Name == "MODEL_PATH" || e.Name == "HAILORT_SERVICE_ADDRESS" || e.Name == "NPU_SCHEDULER_ADDRESS" || e.Name == "NPU_WORKLOAD_ID" {
+		if e.Name == "NPU_RESERVED_DEMAND" || e.Name == "NPU_ADMISSION_POLICY" || strings.HasPrefix(e.Name, "NPU_TARGET_") || e.Name == "NPU_MODEL_SHA256" || strings.HasPrefix(e.Name, "OSH_VISION_") || e.Name == "NPU_COUNT" || e.Name == "NPU_SHARE" || e.Name == "MODEL_PATH" || e.Name == "HAILORT_SERVICE_ADDRESS" || e.Name == "NPU_SCHEDULER_ADDRESS" || e.Name == "NPU_WORKLOAD_ID" {
 			return fmt.Errorf("%s is reserved", e.Name)
 		}
 	}
@@ -104,7 +133,7 @@ func desiredPod(t *api.NPUTask, scheme *runtime.Scheme, allocation *resource.All
 	env := append([]corev1.EnvVar(nil), t.Spec.Env...)
 	env = append(env, corev1.EnvVar{Name: "MODEL_PATH", Value: t.Spec.Model.Path})
 	annotations := map[string]string{hashKey: executionHash(t.Spec)}
-	if t.Spec.NPUShare == 0 {
+	if !t.Spec.Shared() {
 		q := *kresource.NewQuantity(int64(t.Spec.NPUCount), kresource.DecimalSI)
 		resources.Requests[api.ResourceName] = q
 		resources.Limits[api.ResourceName] = q
@@ -118,11 +147,16 @@ func desiredPod(t *api.NPUTask, scheme *runtime.Scheme, allocation *resource.All
 		annotations[sharing.WorkloadIDAnn] = allocation.WorkloadID
 		annotations[sharing.ModelKeyAnn] = allocation.ModelKey
 		annotations[brokerEpochKey] = state.BrokerEpoch
+		annotations[sharing.WeightAnn] = fmt.Sprint(t.Spec.Weight())
 		env = append(env,
-			corev1.EnvVar{Name: "NPU_SHARE", Value: fmt.Sprint(allocation.Share)},
+			corev1.EnvVar{Name: "NPU_SHARE", Value: fmt.Sprint(t.Spec.Weight())},
 			corev1.EnvVar{Name: "HAILORT_SERVICE_ADDRESS", Value: state.Endpoint},
 			corev1.EnvVar{Name: "NPU_SCHEDULER_ADDRESS", Value: state.SchedulerEndpoint},
 			corev1.EnvVar{Name: "NPU_WORKLOAD_ID", Value: allocation.WorkloadID})
+		if t.Spec.BestEffort != nil {
+			env = append(env, corev1.EnvVar{Name: "NPU_TARGET_FPS", Value: fmt.Sprint(t.Spec.BestEffort.TargetFPS)}, corev1.EnvVar{Name: "NPU_MODEL_SHA256", Value: t.Spec.Model.SHA256})
+			env = append(env, corev1.EnvVar{Name: "NPU_RESERVED_DEMAND", Value: fmt.Sprint(allocation.Share)}, corev1.EnvVar{Name: "NPU_ADMISSION_POLICY", Value: admission.BestEffort})
+		}
 	}
 	grace := int64(30)
 	automount := false
@@ -146,7 +180,7 @@ func desiredPod(t *api.NPUTask, scheme *runtime.Scheme, allocation *resource.All
 		p.Spec.Volumes = append(p.Spec.Volumes, corev1.Volume{Name: "model", VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: t.Spec.Model.PVC, ReadOnly: true}}})
 		p.Spec.Containers[0].VolumeMounts = append(p.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "model", MountPath: t.Spec.Model.MountPath, ReadOnly: true})
 	}
-	if t.Spec.NPUShare > 0 {
+	if t.Spec.Shared() {
 		p.Spec.NodeName = state.NodeName
 		p.Spec.Volumes = append(p.Spec.Volumes,
 			corev1.Volume{Name: "dispatcher-uds", VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: "/var/lib/sano/share/uds", Type: hostPathTypePtr(corev1.HostPathDirectoryOrCreate)}}},
@@ -179,12 +213,24 @@ func (r *Reconciler) status(ctx context.Context, t *api.NPUTask, phase, reason, 
 	t.Status.AllocatedShare = 0
 	t.Status.BrokerEpoch = ""
 	t.Status.AllocationTime = nil
+	t.Status.AdmissionPolicy = ""
+	t.Status.AdmissionFingerprint = ""
+	t.Status.ProfileRevision = ""
+	t.Status.ReservedDemand = 0
+	t.Status.ExecutionWeight = 0
 	if p != nil {
 		t.Status.PodName = p.Name
 		t.Status.NodeName = p.Spec.NodeName
-		if t.Spec.NPUShare > 0 {
+		if p.Annotations[sharing.AssignedNPUAnn] != "" {
 			t.Status.NPUID = p.Annotations[sharing.AssignedNPUAnn]
-			t.Status.AllocatedShare = t.Spec.NPUShare
+			t.Status.AdmissionPolicy = p.Annotations[sharing.PolicyAnn]
+			t.Status.AdmissionFingerprint = p.Annotations[sharing.FingerprintAnn]
+			t.Status.ProfileRevision = p.Annotations[sharing.ProfileAnn]
+			fmt.Sscan(p.Annotations[sharing.AllocatedShareAnn], &t.Status.ReservedDemand)
+			if p.Annotations[sharing.PolicyAnn] != admission.BestEffort {
+				t.Status.AllocatedShare = t.Status.ReservedDemand
+			}
+			fmt.Sscan(p.Annotations[sharing.WeightAnn], &t.Status.ExecutionWeight)
 			t.Status.BrokerEpoch = p.Annotations[brokerEpochKey]
 			if before.Status.AllocationTime != nil && before.Status.NPUID == t.Status.NPUID {
 				t.Status.AllocationTime = before.Status.AllocationTime.DeepCopy()
@@ -221,6 +267,8 @@ func (r *Reconciler) status(ctx context.Context, t *api.NPUTask, phase, reason, 
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	r.admissionMu.Lock()
+	defer r.admissionMu.Unlock()
 	t := &api.NPUTask{}
 	if err := r.Get(ctx, req.NamespacedName, t); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -264,7 +312,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		var allocation *resource.Allocation
 		var selected *resource.NPUState
-		if t.Spec.NPUShare > 0 {
+		if t.Spec.Shared() {
+			cfg := r.admissionConfig()
+			pending := func(reason string) (ctrl.Result, error) {
+				return ctrl.Result{RequeueAfter: 2 * time.Second}, r.status(ctx, t, "Pending", reason, "Shared admission blocked: "+reason, nil, hash)
+			}
+			if (t.Spec.BestEffort != nil) != (cfg.SharedAdmissionPolicy == admission.BestEffort) {
+				return pending("AdmissionPolicyMismatch")
+			}
+			if reason, guardErr := r.admissionGuard(ctx, cfg); guardErr != nil {
+				return ctrl.Result{}, guardErr
+			} else if reason != "" {
+				return pending(reason)
+			}
 			if r.Registry == nil {
 				return ctrl.Result{RequeueAfter: time.Second}, r.status(ctx, t, "Pending", "NoDispatcherRegistry", "Shared allocation registry is not configured", nil, hash)
 			}
@@ -272,39 +332,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if snapshotErr != nil {
 				return ctrl.Result{}, snapshotErr
 			}
-			manager := resource.NewManager(resource.FirstFitPolicy{})
-			for _, state := range states {
-				base := state
-				base.Allocated, base.Workloads = 0, nil
-				if err := manager.RegisterNPU(base); err != nil {
-					return ctrl.Result{}, err
-				}
-				for _, workload := range state.Workloads {
-					if err := manager.RestoreAllocation(state.ID, workload); err != nil {
-						return ctrl.Result{}, err
-					}
-				}
-			}
 			modelKey := t.Spec.Model.Key
 			if modelKey == "" {
 				modelKey = path.Base(t.Spec.Model.Path)
 			}
-			placed, allocateErr := manager.Allocate(resource.NPURequest{WorkloadID: string(t.UID), ModelKey: modelKey, Share: int(t.Spec.NPUShare)})
+			request := admission.Request{WorkloadID: string(t.UID), ModelKey: modelKey, ModelSHA256: t.Spec.Model.SHA256, Share: int(t.Spec.NPUShare)}
+			if t.Spec.BestEffort != nil {
+				request.TargetFPS = t.Spec.BestEffort.TargetFPS
+			}
+			placed, state, reason, allocateErr := cfg.Policy().Reserve(states, request, time.Now())
 			if allocateErr != nil {
-				return ctrl.Result{RequeueAfter: time.Second}, r.status(ctx, t, "Pending", "InsufficientNPUShare", allocateErr.Error(), nil, hash)
+				return ctrl.Result{}, allocateErr
 			}
-			allocation = &placed
-			for _, state := range states {
-				if state.ID == placed.NPUID {
-					copy := state
-					selected = &copy
-					break
-				}
+			if reason != "" {
+				return pending(reason)
 			}
+			allocation, selected = &placed, &state
 		}
 		p, err = desiredPod(t, r.Scheme, allocation, selected)
 		if err != nil {
 			return ctrl.Result{}, err
+		}
+		if t.Spec.Shared() {
+			cfg := r.admissionConfig()
+			p.Annotations[sharing.PolicyAnn] = cfg.SharedAdmissionPolicy
+			p.Annotations[sharing.FingerprintAnn] = cfg.Fingerprint()
+			if t.Spec.BestEffort != nil {
+				p.Annotations[sharing.ProfileAnn] = cfg.ProfileRevision(t.Spec.Model.Key)
+			}
 		}
 		if err = r.Create(ctx, p); err != nil {
 			return ctrl.Result{}, err

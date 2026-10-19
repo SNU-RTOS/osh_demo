@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/SNU-RTOS/osh_demo/npu-task/admission"
 	api "github.com/SNU-RTOS/osh_demo/npu-task/api"
+	"github.com/SNU-RTOS/osh_demo/npu-task/sharing"
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -13,6 +15,11 @@ import (
 )
 
 type MetricsCollector struct {
+	Registry        sharing.Registry
+	Admission       *admission.Config
+	demand          *prometheus.Desc
+	weight          *prometheus.Desc
+	admissionLoad   *prometheus.Desc
 	client          client.Client
 	pendingDuration *prometheus.Desc
 	allocationAge   *prometheus.Desc
@@ -24,6 +31,9 @@ type MetricsCollector struct {
 func NewMetricsCollector(c client.Client) *MetricsCollector {
 	labels := []string{"namespace", "task", "npu"}
 	return &MetricsCollector{
+		demand:          prometheus.NewDesc("nputask_reserved_demand_units", "Reserved admission demand, independent of execution weight.", labels, nil),
+		weight:          prometheus.NewDesc("nputask_execution_weight", "Relative execution opportunity weight.", labels, nil),
+		admissionLoad:   prometheus.NewDesc("npu_admission_load_units", "Maximum of reserved demand and broker occupancy.", []string{"npu", "policy"}, nil),
 		client:          c,
 		pendingDuration: prometheus.NewDesc("nputask_pending_duration_seconds", "Seconds the current task has continuously remained Pending.", labels, nil),
 		allocationAge:   prometheus.NewDesc("nputask_allocation_age_seconds", "Seconds since the current logical NPU allocation was created.", labels, nil),
@@ -34,6 +44,9 @@ func NewMetricsCollector(c client.Client) *MetricsCollector {
 }
 
 func (c *MetricsCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- c.demand
+	ch <- c.weight
+	ch <- c.admissionLoad
 	ch <- c.pendingDuration
 	ch <- c.allocationAge
 	ch <- c.restarts
@@ -42,6 +55,15 @@ func (c *MetricsCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
+	if c.Registry != nil && c.Admission != nil {
+		if states, err := c.Registry.Snapshot(context.Background()); err == nil {
+			for _, n := range states {
+				if !n.ObservedAt.IsZero() {
+					ch <- prometheus.MustNewConstMetric(c.admissionLoad, prometheus.GaugeValue, float64(admission.LoadUnits(n)), n.ID, c.Admission.SharedAdmissionPolicy)
+				}
+			}
+		}
+	}
 	var tasks api.NPUTaskList
 	if err := c.client.List(context.Background(), &tasks); err != nil {
 		return
@@ -50,6 +72,8 @@ func (c *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
 	for i := range tasks.Items {
 		task := &tasks.Items[i]
 		labels := []string{task.Namespace, task.Name, task.Status.NPUID}
+		ch <- prometheus.MustNewConstMetric(c.demand, prometheus.GaugeValue, float64(task.Status.ReservedDemand), labels...)
+		ch <- prometheus.MustNewConstMetric(c.weight, prometheus.GaugeValue, float64(task.Status.ExecutionWeight), labels...)
 		reason := ""
 		condition := meta.FindStatusCondition(task.Status.Conditions, "Ready")
 		if condition != nil {

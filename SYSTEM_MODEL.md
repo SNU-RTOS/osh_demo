@@ -1,7 +1,7 @@
 # Current OSH / managed NPU system model
 
-This describes the implemented system at baseline commit `f09c5c4`, plus the
-camera-free image replay harness. It is a working model for deciding changes,
+This describes the implemented system, including restart-configured static and
+utilization-aware best-effort shared admission, plus the camera-free image replay harness. It is a working model for deciding changes,
 tests, and evaluation scope. The legacy visual application path and the managed shared
 execution path remain separate integrations. The new [multi-container vision
 framework](vision/README.md) joins managed **exclusive** tasks to prerecorded
@@ -11,13 +11,13 @@ input and native OpenGL display; shared visual execution is still deferred.
 
 ```mermaid
 flowchart TB
-    User[Task spec: image, model, mode, count or share] --> API[Kubernetes NPUTask]
+    User[Task spec: image, model, mode, count / share / best effort] --> API[Kubernetes NPUTask]
     API --> Controller[Single active controller worker]
     Controller --> Exclusive[Exclusive inference pod]
     Exclusive --> Plugin[Device plugin / CDI / kubelet]
     Plugin --> Device[Assigned physical Hailo devices]
     Controller --> Ledger[Ready dispatcher registry + reconstructed allocation ledger]
-    Ledger --> Placement[First Fit placement]
+    Ledger --> Placement[Startup policy: static First Fit / utilization best effort]
     Placement --> Client[Shared client pod pinned to dispatcher node]
     Client --> Broker[Per-NPU broker: registration, leases, weighted grants]
     Client --> Service[HailoRT service after acquiring a grant]
@@ -61,7 +61,18 @@ before enabling concurrent reconciliation.
 For the exclusive path, `npuCount` is an integer from 1 to 8. Kubernetes schedules
 the pod on one node, requesting that many `hailo.ai/npu` devices. Device isolation
 and explicit selection determine the accessible devices. A task supplies exactly
-one of `npuCount` or `npuShare`.
+one of `npuCount`, `npuShare`, or `bestEffort`.
+
+The static policy retains the accounting above. The optional utilization-aware
+policy instead reserves `ceil(1000 * targetFPS * profiled P95 seconds * margin)`
+units, defaults to an 800-unit budget, and places on the compatible dispatcher
+with the lowest `max(reserved demand, broker occupancy)`. Relative execution
+weight is separate from reserved demand. Fresh rolling broker occupancy gates
+admission; Hailo hardware utilization remains independent telemetry. Best-effort
+clients pace before acquiring execution grants. Profiles/configuration are
+startup snapshots: drain shared tasks, change configuration, restart, then
+resume compatible task specs. No live migration or performance guarantee is
+provided. See [admission policies](npu-task/ADMISSION.md) for the full contract.
 
 For sharing, each ready client acquires a broker grant before issuing its
 HailoRT inference call, then releases the grant. Smooth weighted round robin

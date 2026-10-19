@@ -2,7 +2,9 @@ package sharing
 
 import (
 	"context"
+	"math"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,5 +33,27 @@ func TestSnapshotReconstructsDispatcherAllocations(t *testing.T) {
 func TestParseBrokerEpoch(t *testing.T) {
 	if got := parseBrokerEpoch("npu_share_capacity 1000\nnpu_share_broker_info{epoch=\"abc123\"} 1\n"); got != "abc123" {
 		t.Fatalf("got epoch %q", got)
+	}
+}
+
+func TestMissingTelemetryNeverBecomesIdle(t *testing.T) {
+	if !math.IsNaN(scalar("npu_broker_observation_window_seconds 10\n", "npu_broker_occupancy_units")) {
+		t.Fatal("missing occupancy became zero")
+	}
+	if scalar("npu_broker_occupancy_units 0\n", "npu_broker_occupancy_units") != 0 {
+		t.Fatal("valid idle sample rejected")
+	}
+}
+
+func TestTerminatingPodRetainsReservation(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	now := metav1.NewTime(time.Now())
+	dispatcher := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "dispatcher", Labels: map[string]string{ComponentLabel: DispatcherComponent}, Annotations: map[string]string{DispatcherIDAnn: "npu-0", DispatcherEndpointAnn: "unix:///tmp/hailo", DispatcherSchedulerAnn: "unix:///tmp/broker"}}, Spec: corev1.PodSpec{NodeName: "node-a"}, Status: corev1.PodStatus{Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}}}
+	workload := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "terminating", Finalizers: []string{"test/hold"}, DeletionTimestamp: &now, Annotations: map[string]string{AssignedNPUAnn: "npu-0", AllocatedShareAnn: "240", WorkloadIDAnn: "uid"}}}
+	r := PodRegistry{Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(dispatcher, workload).Build()}
+	states, err := r.Snapshot(context.Background())
+	if err != nil || len(states) != 1 || states[0].Allocated != 240 {
+		t.Fatal(states, err)
 	}
 }

@@ -19,6 +19,11 @@ import (
 // Broker turns concurrent ACQUIRE requests into execution grants selected by
 // the weighted scheduler. Clients acquire one grant before each HailoRT call.
 type Broker struct {
+	clock      func() time.Time
+	started    time.Time
+	busySince  time.Time
+	intervals  []busyInterval
+	completed  uint64
 	mu         sync.Mutex
 	scheduler  *WeightedScheduler
 	waiters    map[string][]grantWaiter
@@ -38,6 +43,8 @@ type Broker struct {
 
 type session struct {
 	share    int
+	demand   int
+	policy   string
 	lastSeen time.Time
 }
 
@@ -62,14 +69,21 @@ func newBrokerWithTTL(tokenTTL, sessionTTL time.Duration) *Broker {
 	if _, err := rand.Read(bytes); err != nil {
 		panic(fmt.Sprintf("create broker epoch: %v", err))
 	}
-	return &Broker{scheduler: NewWeightedScheduler(), waiters: make(map[string][]grantWaiter), grants: make(map[string]uint64), waitCount: make(map[string]uint64), waitSum: make(map[string]float64), waitMax: make(map[string]float64), sessions: make(map[string]session), epoch: hex.EncodeToString(bytes), wake: make(chan struct{}, 1), tokenTTL: tokenTTL, sessionTTL: sessionTTL}
+	return &Broker{clock: time.Now, started: time.Now(), scheduler: NewWeightedScheduler(), waiters: make(map[string][]grantWaiter), grants: make(map[string]uint64), waitCount: make(map[string]uint64), waitSum: make(map[string]float64), waitMax: make(map[string]float64), sessions: make(map[string]session), epoch: hex.EncodeToString(bytes), wake: make(chan struct{}, 1), tokenTTL: tokenTTL, sessionTTL: sessionTTL}
 }
 
 func (b *Broker) Register(id string, share int) error {
+	return b.RegisterReservation(id, share, share, "static-share")
+}
+
+func (b *Broker) RegisterReservation(id string, share, demand int, policy string) error {
+	if share <= 0 || share > 1000 || demand <= 0 || demand > 1000 || (policy != "static-share" && policy != "utilization-best-effort") {
+		return fmt.Errorf("invalid reservation or policy")
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if existing, ok := b.sessions[id]; ok {
-		if existing.share != share {
+		if existing.share != share || existing.demand != demand || existing.policy != policy {
 			return fmt.Errorf("workload %q is already registered with share %d", id, existing.share)
 		}
 		existing.lastSeen = time.Now()
@@ -79,7 +93,7 @@ func (b *Broker) Register(id string, share int) error {
 	if err := b.scheduler.Register(id, share); err != nil {
 		return err
 	}
-	b.sessions[id] = session{share: share, lastSeen: time.Now()}
+	b.sessions[id] = session{share: share, demand: demand, policy: policy, lastSeen: time.Now()}
 	return nil
 }
 
@@ -102,7 +116,7 @@ func (b *Broker) unregisterLocked(id string, waiterErr error) bool {
 	delete(b.waiters, id)
 	wasInFlight := b.busy && b.inFlight == id
 	if wasInFlight {
-		b.busy, b.inFlight = false, ""
+		b.finishLocked(false)
 	}
 	return wasInFlight
 }
@@ -162,7 +176,7 @@ func (b *Broker) Complete(id string) error {
 		b.mu.Unlock()
 		return fmt.Errorf("workload %q does not own the execution token", id)
 	}
-	b.busy, b.inFlight = false, ""
+	b.finishLocked(true)
 	b.mu.Unlock()
 	b.notify()
 	return nil
@@ -186,7 +200,7 @@ func (b *Broker) Next(ctx context.Context, id string) error {
 		return err
 	}
 	b.waiters[id] = append(b.waiters[id], grantWaiter{result: granted, queuedAt: time.Now()})
-	b.busy, b.inFlight = false, ""
+	b.finishLocked(true)
 	b.mu.Unlock()
 	b.notify()
 	select {
@@ -241,6 +255,7 @@ func (b *Broker) Run(ctx context.Context) {
 				b.waitMax[id] = wait
 			}
 			b.busy, b.inFlight = true, id
+			b.busySince = b.clock()
 			b.token++
 			token := b.token
 			waiter.result <- nil
@@ -250,7 +265,7 @@ func (b *Broker) Run(ctx context.Context) {
 				b.mu.Lock()
 				expired := b.busy && b.inFlight == id && b.token == token
 				if expired {
-					b.busy, b.inFlight = false, ""
+					b.finishLocked(false)
 				}
 				b.mu.Unlock()
 				if expired {
@@ -300,7 +315,7 @@ func (b *Broker) handle(ctx context.Context, connection net.Conn) {
 	}
 	switch fields[0] {
 	case "REGISTER":
-		if len(fields) != 3 {
+		if len(fields) != 3 && len(fields) != 5 {
 			fmt.Fprintln(connection, "ERROR malformed REGISTER")
 			return
 		}
@@ -309,7 +324,16 @@ func (b *Broker) handle(ctx context.Context, connection net.Conn) {
 			fmt.Fprintln(connection, "ERROR invalid share")
 			return
 		}
-		err = b.Register(fields[1], share)
+		if len(fields) == 5 {
+			demand, parseErr := strconv.Atoi(fields[3])
+			if parseErr != nil {
+				fmt.Fprintln(connection, "ERROR invalid demand")
+				return
+			}
+			err = b.RegisterReservation(fields[1], share, demand, fields[4])
+		} else {
+			err = b.Register(fields[1], share)
+		}
 		if err != nil {
 			fmt.Fprintln(connection, "ERROR "+err.Error())
 			return
@@ -366,19 +390,22 @@ func (b *Broker) MetricsHandler(w http.ResponseWriter, _ *http.Request) {
 	defer b.mu.Unlock()
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
 	states := b.scheduler.QueueStates()
-	now := time.Now()
+	now := b.clock()
+	occupancy, window := b.occupancyLocked(now)
+	fmt.Fprintf(w, "npu_broker_occupancy_units %.6f\nnpu_broker_observation_window_seconds %.6f\nnpu_broker_observation_timestamp_seconds %.3f\nnpu_broker_completed_grants_total %d\n", occupancy, window, float64(now.UnixNano())/1e9, b.completed)
 	allocated := 0
 	for _, state := range states {
-		allocated += state.Share
+		allocated += b.sessions[state.WorkloadID].demand
 	}
 	fmt.Fprintf(w, "# HELP npu_share_active_workloads Registered workloads.\n# TYPE npu_share_active_workloads gauge\nnpu_share_active_workloads %d\n", len(states))
 	fmt.Fprintf(w, "npu_share_capacity %d\n", logicalCapacity)
 	fmt.Fprintf(w, "npu_share_allocated_total %d\n", allocated)
-	fmt.Fprintf(w, "npu_share_available %d\n", logicalCapacity-allocated)
+	fmt.Fprintf(w, "npu_share_available %d\n", max(0, logicalCapacity-allocated))
 	fmt.Fprintf(w, "npu_share_broker_info{epoch=\"%s\"} 1\n", b.epoch)
 	for _, state := range states {
 		id := strings.NewReplacer("\\", "\\\\", "\"", "\\\"").Replace(state.WorkloadID)
-		fmt.Fprintf(w, "npu_share_allocated{workload=\"%s\"} %d\n", id, state.Share)
+		fmt.Fprintf(w, "npu_share_allocated{workload=\"%s\"} %d\n", id, b.sessions[state.WorkloadID].demand)
+		fmt.Fprintf(w, "npu_share_execution_weight{workload=\"%s\"} %d\n", id, state.Share)
 		fmt.Fprintf(w, "npu_share_queue_depth{workload=\"%s\"} %d\n", id, state.Queued)
 		current := b.sessions[state.WorkloadID]
 		fmt.Fprintf(w, "npu_share_session_last_seen_seconds{workload=\"%s\"} %.3f\n", id, float64(current.lastSeen.UnixNano())/1e9)

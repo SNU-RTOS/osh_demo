@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -28,17 +29,30 @@ const (
 	AllocatedShareAnn      = "npu.snu-rtos.io/allocated-share"
 	WorkloadIDAnn          = "npu.snu-rtos.io/workload-id"
 	ModelKeyAnn            = "npu.snu-rtos.io/model-key"
+	PolicyAnn              = "npu.snu-rtos.io/admission-policy"
+	FingerprintAnn         = "npu.snu-rtos.io/admission-fingerprint"
+	ProfileAnn             = "npu.snu-rtos.io/profile-revision"
+	WeightAnn              = "npu.snu-rtos.io/execution-weight"
+	ArchitectureAnn        = "npu.snu-rtos.io/device-architecture"
+	RuntimeAnn             = "npu.snu-rtos.io/runtime-version"
 )
 
 type Registry interface {
 	Snapshot(context.Context) ([]resource.NPUState, error)
 }
 
-type PodRegistry struct{ Client client.Client }
+type PodRegistry struct {
+	Client   client.Reader
+	Observer *BrokerObserver
+}
 
 var brokerHTTPClient = &http.Client{Timeout: 500 * time.Millisecond}
 
 func brokerEpoch(pod *corev1.Pod) string {
+	return parseBrokerEpoch(brokerMetrics(pod))
+}
+
+func brokerMetrics(pod *corev1.Pod) string {
 	if pod.Status.PodIP == "" {
 		return ""
 	}
@@ -54,7 +68,20 @@ func brokerEpoch(pod *corev1.Pod) string {
 	if err != nil {
 		return ""
 	}
-	return parseBrokerEpoch(string(body))
+	return string(body)
+}
+
+func scalar(metrics, name string) float64 {
+	for _, line := range strings.Split(metrics, "\n") {
+		f := strings.Fields(line)
+		if len(f) == 2 && f[0] == name {
+			v, err := strconv.ParseFloat(f[1], 64)
+			if err == nil {
+				return v
+			}
+		}
+	}
+	return math.NaN()
 }
 
 func parseBrokerEpoch(metrics string) string {
@@ -98,11 +125,24 @@ func (r PodRegistry) Snapshot(ctx context.Context) ([]resource.NPUState, error) 
 			capacity = parsed
 		}
 		byID[id] = len(states)
-		states = append(states, resource.NPUState{ID: id, NodeName: pod.Spec.NodeName, Endpoint: endpoint, SchedulerEndpoint: schedulerEndpoint, BrokerEpoch: brokerEpoch(pod), Health: resource.HealthHealthy, Capacity: capacity})
+		metrics := ""
+		if r.Observer != nil {
+			metrics = r.Observer.Metrics(pod)
+		} else {
+			metrics = brokerMetrics(pod)
+		}
+		observed := scalar(metrics, "npu_broker_observation_timestamp_seconds")
+		var at time.Time
+		if observed > 0 {
+			at = time.UnixMilli(int64(observed * 1000))
+		}
+		states = append(states, resource.NPUState{ID: id, NodeName: pod.Spec.NodeName, Endpoint: endpoint, SchedulerEndpoint: schedulerEndpoint, BrokerEpoch: parseBrokerEpoch(metrics), Health: resource.HealthHealthy, Capacity: capacity,
+			DeviceArchitecture: pod.Annotations[ArchitectureAnn], RuntimeVersion: pod.Annotations[RuntimeAnn],
+			ObservedAt: at, ObservationWindow: scalar(metrics, "npu_broker_observation_window_seconds"), BrokerOccupancy: scalar(metrics, "npu_broker_occupancy_units")})
 	}
 	for i := range pods.Items {
 		pod := &pods.Items[i]
-		if pod.DeletionTimestamp != nil || pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+		if pod.DeletionTimestamp == nil && (pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed) {
 			continue
 		}
 		id := pod.Annotations[AssignedNPUAnn]

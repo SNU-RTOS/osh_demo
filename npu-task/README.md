@@ -1,5 +1,12 @@
 # Managed Hailo NPU tasks
 
+Shared admission is now switchable at controller startup: retain static
+`npuShare` allocation or select profiled, utilization-aware `bestEffort`
+admission. Exclusive `npuCount` remains available under both policies.
+Start with [the best-effort reproduction guide](BEST_EFFORT_REPRODUCE.md) to
+build, profile a model, enable the mode, and deploy additional containers.
+See [ADMISSION.md](ADMISSION.md) for policy semantics and switching/rollback.
+
 For a complete copy-and-run procedure, see [REPRODUCE.md](REPRODUCE.md). It is
 the authoritative runbook for building, deploying, testing, observing, and
 cleaning this milestone.
@@ -20,9 +27,10 @@ documented in [`MULTI_NPU_MILESTONES.md`](MULTI_NPU_MILESTONES.md). The logical
 accounting and First Fit core live in `resource/`; the weighted runtime broker
 lives in `dispatcher/`. The existing exclusive `npuCount` API remains available.
 
-Shared tasks use `spec.npuShare` instead of `spec.npuCount`. The controller
+Shared tasks use `spec.npuShare` under the static policy or `spec.bestEffort`
+under the utilization-aware policy instead of `spec.npuCount`. The controller
 discovers ready dispatcher Pods, reconstructs their active allocations, applies
-First Fit, and injects `HAILORT_SERVICE_ADDRESS`.
+the selected admission policy, and injects `HAILORT_SERVICE_ADDRESS`.
 [`shared/README.md`](shared/README.md) is the clone-to-monitor runbook for the
 two-dispatcher, four-client hardware validation. It includes image construction,
 workload execution, live allocation/pending monitoring, evaluation, cleanup,

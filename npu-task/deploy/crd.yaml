@@ -116,6 +116,9 @@ spec:
                     pattern: ^/
                   key:
                     type: string
+                  sha256:
+                    type: string
+                    pattern: '^[a-f0-9]{64}$'
                   pvc: *id001
                   mountPath:
                     type: string
@@ -133,6 +136,20 @@ spec:
                 type: integer
                 minimum: 0
                 maximum: 1000
+              bestEffort:
+                type: object
+                required: [targetFPS]
+                properties:
+                  targetFPS:
+                    type: number
+                    exclusiveMinimum: true
+                    minimum: 0
+                    maximum: 1000000
+                  weight:
+                    type: integer
+                    minimum: 1
+                    maximum: 1000
+                    default: 100
               suspend:
                 type: boolean
                 default: false
@@ -145,8 +162,10 @@ spec:
             x-kubernetes-validations:
             - rule: '!has(self.visual) || (has(self.npuCount) && self.npuCount == 1 && (!has(self.npuShare) || self.npuShare == 0))'
               message: Visual tasks require one exclusive NPU
-            - rule: '(has(self.npuCount) && self.npuCount > 0) != (has(self.npuShare) && self.npuShare > 0)'
-              message: Exactly one of npuCount or npuShare must be greater than zero
+            - rule: '((has(self.npuCount) && self.npuCount > 0) ? 1 : 0) + ((has(self.npuShare) && self.npuShare > 0) ? 1 : 0) + (has(self.bestEffort) ? 1 : 0) == 1'
+              message: Exactly one of npuCount, npuShare or bestEffort is required
+            - rule: '!has(self.bestEffort) || (has(self.model.key) && self.model.key != "" && has(self.model.sha256))'
+              message: Best-effort tasks require model.key and model.sha256
           status:
             type: object
             properties:
@@ -158,6 +177,13 @@ spec:
               npuID: *id001
               dispatcherEndpoint: *id001
               allocatedShare:
+                type: integer
+              admissionPolicy: *id001
+              admissionFingerprint: *id001
+              profileRevision: *id001
+              reservedDemand:
+                type: integer
+              executionWeight:
                 type: integer
               brokerEpoch: *id001
               allocationTime:

@@ -2,6 +2,8 @@
 // does not interpret measured utilization as allocatable capacity.
 package resource
 
+import "time"
+
 const DefaultCapacity = 1000
 
 type Health string
@@ -31,6 +33,11 @@ type Allocation struct {
 }
 
 type NPUState struct {
+	DeviceArchitecture  string
+	RuntimeVersion      string
+	BrokerOccupancy     float64
+	ObservedAt          time.Time
+	ObservationWindow   float64
 	ID                  string
 	NodeName            string
 	Endpoint            string

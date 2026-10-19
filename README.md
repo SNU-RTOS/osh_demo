@@ -3,6 +3,10 @@
 
 # Execution Guide
 
+To enable utilization-aware NPU sharing and deploy additional inference
+containers without choosing device IDs, follow the
+[best-effort sharing guide](npu-task/BEST_EFFORT_REPRODUCE.md).
+
 For the multi-container detection, instance segmentation, and pose framework
 with prerecorded input, per-stage latency logs, and native GPU display, see
 [vision/README.md](vision/README.md).

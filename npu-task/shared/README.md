@@ -1,5 +1,10 @@
 # Multi-NPU fractional sharing: clone-to-monitor runbook
 
+This is the **static-share** validation runbook. For the new utilization-aware
+mode and instructions for adding containers, use
+[the best-effort reproduction guide](../BEST_EFFORT_REPRODUCE.md). Its policy
+configuration must be drained/switched before running this static campaign.
+
 This runbook starts with a clean clone and ends with real Hailo-8 inference,
 First Fit placement, weighted per-NPU execution, pending admission, monitoring,
 an exclusive/shared comparison, and cleanup. `npuShare` is a logical admission

@@ -1,5 +1,10 @@
 # Hailo utilization and NPU sharing
 
+The dispatcher-based sharing path is implemented. Shared admission can now use
+either the existing static-share policy or profiled best-effort demand plus
+broker occupancy; see [ADMISSION.md](ADMISSION.md). The earlier milestone notes
+below explain why raw Hailo utilization alone cannot replace allocation.
+
 ## What HailoRT exposes
 
 The Hailo-8 HailoRT branch contains `hailortcli monitor`. An inference
