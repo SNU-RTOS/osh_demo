@@ -1,0 +1,7 @@
+{
+  "path": "assets/pedestrians.avi",
+  "url": "https://raw.githubusercontent.com/opencv/opencv/71d3237a093b60a27601c20e9ee6c3e52154e8b1/samples/data/vtest.avi",
+  "sha256": "45cddc9490be69345cbdab64ca583be65987e864ca408038e648db99e10516cf",
+  "bytes": 8131690,
+  "source": "https://github.com/opencv/opencv/blob/4.10.0/samples/data/vtest.avi"
+}

@@ -1,5 +1,9 @@
 # Multiple vision containers on the edge device
 
+For the same four-tile pipeline with a different, checksum-pinned motion video,
+see [the pedestrian-video demo](PEDESTRIAN_DEMO.md). It includes preparation,
+deployment with the current controller, playback, and saved-result validation.
+
 One prerecorded source feeds independent detection, instance segmentation, and
 human pose containers. Each container owns one Hailo-8, runs preprocessing →
 inference → model-specific postprocessing, and publishes typed results to a

@@ -1,6 +1,7 @@
 models/*.hef
 assets/*.jpg
 assets/*.mp4
+assets/*.avi
 results/
 build/
 __pycache__/

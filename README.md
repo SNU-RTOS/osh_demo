@@ -3,6 +3,9 @@
 
 # Execution Guide
 
+For a reproducible alternate-video version of the original/detection/
+segmentation/pose demo, follow [the pedestrian-video demo](vision/PEDESTRIAN_DEMO.md).
+
 To enable utilization-aware NPU sharing and deploy additional inference
 containers without choosing device IDs, follow the
 [best-effort sharing guide](npu-task/BEST_EFFORT_REPRODUCE.md).
