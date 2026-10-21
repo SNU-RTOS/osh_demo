@@ -9,6 +9,15 @@ input and native OpenGL display; shared visual execution is still deferred.
 
 ## Components and boundaries
 
+The vision application now has a standard model catalogue and CLI for model
+selection, deployment, lifecycle, playback, and reading metrics; see
+[the vision framework guide](vision/FRAMEWORK.md). The same container runner
+handles device discovery, HEF loading, fixed batch-size-one execution, decoding,
+and rolling five-second FPS/latency summaries. The viewer joins completed-frame
+GPU measurements and displays per-task averages/P95, throughput, and drops.
+These visual tasks still use one exclusive NPU each; the catalogue does not
+silently convert them into shared clients.
+
 ```mermaid
 flowchart TB
     User[Task spec: image, model, mode, count / share / best effort] --> API[Kubernetes NPUTask]

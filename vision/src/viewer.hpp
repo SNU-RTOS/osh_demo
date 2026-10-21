@@ -96,20 +96,33 @@ public:
     return true;
   }
   void tile(const cv::Mat &rgb, const Json &result, const std::string &label,
-            int index, int count) {
+            int index, int count, const Json &worker=Json::object(),
+            const Json &output=Json::object(),uint64_t drops=0,bool headless=false) {
     int columns = std::ceil(std::sqrt(count)),
         rows = (count + columns - 1) / columns;
     float tw = float(width) / columns, th = float(height) / rows,
           ox = (index % columns) * tw, oy = (index / columns) * th;
-    cv::Mat text(28, int(tw), CV_8UC3, cv::Scalar(24, 24, 24));
+    int header=index==0 ? 28 : 78;
+    cv::Mat text(header, std::max(1,int(tw)), CV_8UC3, cv::Scalar(24, 24, 24));
     cv::putText(text, label, {8, 20}, cv::FONT_HERSHEY_SIMPLEX, .45,
                 {230, 230, 230}, 1, cv::LINE_AA);
-    texture(text, ox, oy, tw, 28);
+    if (index!=0) {
+      auto number=[](const Json& v) {if (!v.is_number())return std::string("--");char b[32];std::snprintf(b,sizeof b,"%.1f",v.get<double>());return std::string(b);};
+      auto rate=[&](const Json& m){return number(m.value("throughput_fps",Json(nullptr)));};
+      auto latency=[&](const Json&m,const std::string& key){
+        auto l=m.value("latency_ms",Json::object()).value(key,Json::object());
+        return number(l.value("mean",Json(nullptr)))+"/"+number(l.value("p95",Json(nullptr)));};
+      std::string line1="RUN "+rate(worker)+" FPS | infer avg/P95 "+latency(worker,"inference_ms")+" ms";
+      std::string line2="OUT "+rate(output)+" FPS | "+(headless?"result":"GPU E2E")+" "+latency(output,headless?"acquisition_to_result_ms":"acquisition_to_gpu_ms")+" ms | drops "+std::to_string(drops);
+      cv::putText(text,line1,{8,43},cv::FONT_HERSHEY_SIMPLEX,.40,{100,240,220},1,cv::LINE_AA);
+      cv::putText(text,line2,{8,65},cv::FONT_HERSHEY_SIMPLEX,.38,{240,220,130},1,cv::LINE_AA);
+    }
+    texture(text, ox, oy, tw, header);
     if (rgb.empty())
       return;
-    float scale = std::min(tw / rgb.cols, (th - 30) / rgb.rows),
+    float scale = std::max(.001f,std::min(tw / rgb.cols, (th - header - 2) / rgb.rows)),
           w = rgb.cols * scale, h = rgb.rows * scale, x = ox + (tw - w) / 2,
-          y = oy + 30;
+          y = oy + header + 2;
     texture(rgb, x, y, w, h);
     if (!result.contains("objects"))
       return;

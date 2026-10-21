@@ -3,6 +3,13 @@
 
 # Execution Guide
 
+**To reproduce the current video demo:** follow
+[vision/REPRODUCE.md](vision/REPRODUCE.md), including cleanup, v3 image import,
+the prepared-SDK build option, and the `doctor` preflight before deployment.
+
+For catalogue-based model deployment and live per-container FPS/latency in the
+video display, start with [the vision framework guide](vision/FRAMEWORK.md).
+
 For a reproducible alternate-video version of the original/detection/
 segmentation/pose demo, follow [the pedestrian-video demo](vision/PEDESTRIAN_DEMO.md).
 

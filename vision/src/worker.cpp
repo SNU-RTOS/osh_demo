@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include "metrics.hpp"
 #ifndef VISION_MOCK_ONLY
 #include <hailo/hailort.hpp>
 #endif
@@ -134,6 +135,8 @@ int worker(int argc, char **argv) {
 #else
   require(mock, "this test binary supports --mock only");
 #endif
+  std::cout << Json{{"event","runner_config"},{"task",task},{"kind",kind},
+                    {"model",model},{"device",device},{"npu_count",1},{"batch_size",1},{"mock",mock}}.dump() << std::endl;
   while (!stopped) {
     int fd = connect_socket(socket_path);
     if (fd < 0) {
@@ -151,6 +154,7 @@ int worker(int argc, char **argv) {
                         {"mock", mock}}),
               "registration send failed");
       Packet p;
+      RollingMetrics metrics;
       while (!stopped && receive(fd, p)) {
         require(p.meta.at("type") == "frame", "expected frame");
         auto meta = p.meta;
@@ -194,6 +198,11 @@ int worker(int argc, char **argv) {
         meta["device"] = device;
         meta["mock"] = mock;
         meta["warmup"] = meta.at("task_frame").get<int>() <= 5;
+        meta["batch_size"]=1;
+        meta["container_durations"]=worker_durations(meta);
+        uint64_t completed_ns=meta.at("postprocess_end_ns");
+        if (!meta["warmup"].get<bool>()) metrics.add(completed_ns,meta["container_durations"],meta.at("received_ns"));
+        meta["worker_metrics"]=metrics.summary(completed_ns);
         meta["result_send_ns"] = now();
         require(send(fd, meta), "result send failed");
         auto timing = meta;

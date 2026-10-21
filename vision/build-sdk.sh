@@ -3,6 +3,7 @@
 # Docker, chroot and mount. All installed packages stay inside the temporary SDK.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+RELEASE=${OSH_VISION_RELEASE:-v3}
 SDK=${OSH_VISION_SDK_ROOT:-/tmp/osh-vision-sdk-build}
 case "$SDK" in /tmp/osh-vision-*) ;; *) echo 'SDK must be under /tmp/osh-vision-*' >&2; exit 1;; esac
 [ ! -e "$SDK" ] || { echo "Refusing to overwrite $SDK" >&2; exit 1; }
@@ -26,7 +27,7 @@ python3 vision/package_sdk.py --sdk "$SDK" --output vision/build/runtime
 mkdir -p vision/build/models
 cp yolov10s.hef vision/build/models/yolov10s.hef
 for kind in detection segmentation pose; do
-    docker build -f vision/Dockerfile.bundle --target "$kind" -t "osh-vision-$kind:v2" vision
-    docker save "osh-vision-$kind:v2" | k3s ctr images import -
+    docker build -f vision/Dockerfile.bundle --target "$kind" -t "osh-vision-$kind:$RELEASE" vision
+    docker save "osh-vision-$kind:$RELEASE" | k3s ctr images import -
 done
 printf 'Viewer bundle ready: %s/vision/build/runtime\nSDK retained at %s\n' "$ROOT" "$SDK"

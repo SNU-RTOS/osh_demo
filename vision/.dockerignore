@@ -1,0 +1,7 @@
+# COPY-only bundle image builds need the current runtime and model files.
+build/runtime.previous.*
+results
+__pycache__
+tests/__pycache__
+assets
+.git

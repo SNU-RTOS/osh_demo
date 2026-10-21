@@ -1,4 +1,5 @@
 #include "viewer.hpp"
+#include "metrics.hpp"
 #include <condition_variable>
 #include <csignal>
 #include <fcntl.h>
@@ -14,6 +15,7 @@ struct Frame {
   cv::Mat rgb;
 };
 struct Peer {
+  RollingMetrics metrics;
   int fd = -1;
   std::atomic<bool> live{true};
   std::atomic<uint64_t> disconnected_ns{0};
@@ -225,6 +227,7 @@ int hub(int argc, char **argv) {
     require(video.open(source), "cannot open input " + source);
   uint64_t seq = 0, next = now(), drain = 0;
   std::shared_ptr<Frame> last;
+  std::vector<std::shared_ptr<Peer>> last_tiles;
   std::cout << Json{{"event", "listening"},
                     {"socket", socket_path},
                     {"session", session}}
@@ -321,6 +324,7 @@ int hub(int argc, char **argv) {
     tiles.clear();
     for (auto &[name, p] : current)
       tiles.push_back(p);
+    last_tiles=tiles;
     if (viewer)
       viewer->tile(latest, Json::object(), "Original", 0, tiles.size() + 1);
     int index = 1;
@@ -343,12 +347,21 @@ int hub(int argc, char **argv) {
       else if (now() - p->display.at("result_received_ns").get<uint64_t>() >
                2000000000ULL)
         label += " STALE";
+      else if (p->display.value("warmup",false))
+        label += " WARMUP";
       if (p->hello.value("mock", false))
         label += " MOCK";
+      auto worker_metrics=p->display.value("worker_metrics",Json::object());
+      if (p->display.contains("postprocess_end_ns") &&
+          now()-p->display.at("postprocess_end_ns").get<uint64_t>()>=5000000000ULL) {
+        worker_metrics["throughput_fps"]=0.;
+        worker_metrics["latency_ms"]=Json::object();
+      }
       if (viewer)
         viewer->tile(p->display_frame ? p->display_frame->rgb : cv::Mat{},
                      p->display.value("result", Json::object()), label, index++,
-                     tiles.size() + 1);
+                     tiles.size() + 1, worker_metrics,
+                     p->metrics.summary(now()), p->drops, headless);
     }
     uint64_t done = viewer ? viewer->finish() : now();
     for (auto &p : completed) {
@@ -356,6 +369,9 @@ int hub(int argc, char **argv) {
       auto record = measured(p->display, p->display.at("render_start_ns"), done,
                              headless);
       record["renderer"] = viewer ? viewer->renderer : "none";
+      if (!record.value("warmup",true)) p->metrics.add(done,record["durations"],record.at("acquired_ns"));
+      record["output_metrics"]=p->metrics.summary(done);
+      p->display["output_metrics"]=record["output_metrics"];
       log << record.dump() << std::endl;
       record.erase("result");
       record["type"] = "ack";
@@ -380,19 +396,23 @@ int hub(int argc, char **argv) {
         ++it;
     }
     if (drain && now() >= drain) {
-      if (viewer && !screenshot.empty()) {
-        viewer->begin();
-        viewer->tile(latest, Json::object(), "Original", 0, tiles.size() + 1);
-        int i = 1;
-        for (auto &p : tiles)
-          viewer->tile(p->display_frame ? p->display_frame->rgb : cv::Mat{},
-                       p->display.value("result", Json::object()),
-                       p->hello.at("task"), i++, tiles.size() + 1);
-        viewer->finish(screenshot);
-      }
       break;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  }
+  if (viewer && !screenshot.empty()) {
+    viewer->begin();
+    viewer->tile(latest,Json::object(),"Original / final snapshot",0,last_tiles.size()+1);
+    int index=1;
+    for (auto&p:last_tiles) {
+      std::lock_guard<std::mutex> l(p->mutex);
+      auto label=p->hello.at("task").get<std::string>()+" / "+p->hello.at("kind").get<std::string>()+" SNAPSHOT";
+      if (p->hello.value("mock",false)) label+=" MOCK";
+      viewer->tile(p->display_frame?p->display_frame->rgb:cv::Mat{},p->display.value("result",Json::object()),
+                   label,index++,last_tiles.size()+1,p->display.value("worker_metrics",Json::object()),
+                   p->display.value("output_metrics",Json::object()),p->drops,false);
+    }
+    viewer->finish(screenshot);
   }
   return 0;
 }

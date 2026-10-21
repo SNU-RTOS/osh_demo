@@ -9,7 +9,7 @@ metadata:
   name: detection
   namespace: osh-vision
 spec:
-  image: osh-vision-detection:v2
+  image: osh-vision-detection:v3
   command: [/app/vision_worker]
   args: [--kind, detection]
   model: {path: /models/yolov10s.hef}
@@ -26,7 +26,7 @@ metadata:
   name: segmentation
   namespace: osh-vision
 spec:
-  image: osh-vision-segmentation:v2
+  image: osh-vision-segmentation:v3
   command: [/app/vision_worker]
   args: [--kind, segmentation]
   model: {path: /models/yolov8n_seg.hef}
@@ -43,7 +43,7 @@ metadata:
   name: pose
   namespace: osh-vision
 spec:
-  image: osh-vision-pose:v2
+  image: osh-vision-pose:v3
   command: [/app/vision_worker]
   args: [--kind, pose]
   model: {path: /models/yolov8s_pose.hef}

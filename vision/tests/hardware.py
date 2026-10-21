@@ -53,7 +53,7 @@ try:
         n=count('detection');wait_for(lambda:count('detection')>=n+5)
         n=count('pose');patch('pose',False);suspended=False;wait_for(lambda:count('pose')>=n+5)
         report['suspend_resume']=True
-        kube('apply','-f','-',obj={'apiVersion':'npu.snu-rtos.io/v1alpha1','kind':'NPUTask','metadata':{'name':bad,'namespace':'osh-vision'},'spec':{'image':'osh-vision-detection:v2','command':['/app/vision_worker'],'args':['--kind','detection'],'model':{'path':'/models/missing.hef'},'npuCount':1,'mode':'Batch'}})
+        kube('apply','-f','-',obj={'apiVersion':'npu.snu-rtos.io/v1alpha1','kind':'NPUTask','metadata':{'name':bad,'namespace':'osh-vision'},'spec':{'image':task('detection')['spec']['image'],'command':['/app/vision_worker'],'args':['--kind','detection'],'model':{'path':'/models/missing.hef'},'npuCount':1,'mode':'Batch'}})
         wait_for(lambda:task(bad).get('status',{}).get('phase')=='Failed')
         pod=task(bad)['status']['podName'];error=kube('-n','osh-vision','logs',pod).stdout
         assert 'WORKER_FAILED' in error,error

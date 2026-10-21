@@ -2,7 +2,6 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 kubectl apply -f "$ROOT/npu-task/deploy/crd.yaml"
-kubectl -n npu-task-system set image deployment/npu-task-controller controller=npu-task-controller:vision-v1
-kubectl -n npu-task-system rollout status deployment/npu-task-controller --timeout=90s
-kubectl apply -f "$ROOT/vision/tasks.yaml"
-kubectl -n osh-vision get nputasks
+kubectl -n npu-task-system get deployment/npu-task-controller >/dev/null
+# Preserve the installed controller image and its shared-admission policy.
+exec python3 "$ROOT/vision/osh.py" demo --deploy-only "$@"

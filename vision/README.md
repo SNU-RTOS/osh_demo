@@ -1,5 +1,14 @@
 # Multiple vision containers on the edge device
 
+**Start here:** [current v3 reproduction steps](REPRODUCE.md). This is the
+build/import/preflight/run guide, including recovery from missing images and
+the full-root-filesystem case on the development device.
+
+Use [the standard framework CLI and live-metrics guide](FRAMEWORK.md) to choose
+a model, deploy containers, and see rolling FPS/latency on every result tile.
+The current runner release is v3; rebuild worker images and the native viewer
+before using the new measurement fields.
+
 For the same four-tile pipeline with a different, checksum-pinned motion video,
 see [the pedestrian-video demo](PEDESTRIAN_DEMO.md). It includes preparation,
 deployment with the current controller, playback, and saved-result validation.
@@ -56,9 +65,12 @@ sudo vision/deploy.sh
 The standard Dockerfile uses the existing SDK by digest, HailoRT 4.21, and pinned
 SDK development packages. It also exports a native viewer bundle and generates
 the replay video. Each final task image contains exactly its own HEF.
-`tasks.yaml` targets node `ava`, session `demo`, and image release `v2`; change
+`tasks.yaml` targets node `ava`, session `demo`, and image release `v3`; change
 these together for another deployment. Existing dispatcher workloads are retained.
 Three free exclusive NPUs are required; insufficient capacity leaves tasks Pending.
+Build scripts import a controller image but do not install or switch the active
+controller. Install the current controller separately on a fresh cluster using
+the framework runbook; `vision/deploy.sh` preserves an existing installation.
 
 For a host whose full root disk prevents Docker RUN, use:
 

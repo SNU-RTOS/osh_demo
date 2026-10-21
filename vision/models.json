@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "models": {
+    "detection": {"adapter": "detection", "image": "osh-vision-detection:v3", "path": "/models/yolov10s.hef", "npus": 1, "batchSize": 1},
+    "segmentation": {"adapter": "segmentation", "image": "osh-vision-segmentation:v3", "path": "/models/yolov8n_seg.hef", "npus": 1, "batchSize": 1},
+    "pose": {"adapter": "pose", "image": "osh-vision-pose:v3", "path": "/models/yolov8s_pose.hef", "npus": 1, "batchSize": 1}
+  }
+}

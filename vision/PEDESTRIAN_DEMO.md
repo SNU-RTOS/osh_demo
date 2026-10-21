@@ -1,5 +1,9 @@
 # Alternate video demo: pedestrians in motion
 
+For the current measured v3 release, begin with
+[REPRODUCE.md](REPRODUCE.md). It includes the prepared-SDK build path and image
+preflight required before deploying these tasks.
+
 This reproduces the existing four-tile video case with a different input:
 OpenCV's `vtest.avi` pedestrian footage, rather than the generated pan/zoom of
 `people.jpg`. You see the original video beside independent detection,
@@ -73,9 +77,9 @@ run the viewer on that same node. Insufficient free capacity leaves tasks
 Pending. Existing dispatcher pods continue reserving their devices; this demo
 does not stop them or change the shared admission policy.
 
-Do not use the older `vision/deploy.sh` shortcut on an upgraded deployment:
-it selects the `npu-task-controller:vision-v1` image tag. The commands above
-preserve the currently running controller version.
+The updated `vision/deploy.sh` wrapper preserves the installed controller and
+uses the [standard deployment CLI](FRAMEWORK.md). Current worker images are v3;
+rebuild them and the native viewer to see rolling FPS/latency on the display.
 
 ## 3. Run the alternate video
 
